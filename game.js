@@ -1,5 +1,5 @@
 
-let DEBUG = false;
+let DEBUG = true;
 
 // Sound
 let audioCtx = null;
@@ -343,7 +343,73 @@ class MovingCharacter extends Entity {
         // this.animation.start();
     }
 
-     
+     moveLeft() {  
+       // this.velocity = 350;
+        this.animation.setAnimationIndex(1); 
+        this.animation.length = 3;
+       
+        if(!this.isHittingLeftWall() && this.x > 0) {  
+            this.shiftPosition(-this.dx, 0);
+        }
+
+        this.resolveLeftWallCollision(); // TODO: Not being able to run through walls.
+        
+       
+    }
+
+    
+     moveRight() {
+       // this.velocity = 350;
+        this.animation.setAnimationIndex(0);
+        this.animation.length = 3;    
+       
+        if(!this.isHittingRightWall() && this.x < 800) {  
+            this.shiftPosition(this.dx, 0);
+        }    
+        
+       this.resolveRightWallCollision();
+    }
+
+     moveUp() {  
+      // this.velocity = 320;
+        this.animation.setAnimationIndex(2);
+        this.animation.length = 2;
+
+            this.snapToLadder(this.x, this.y);
+        
+        if(!this.isHittingRoof() && !this.isAtLadderTop()) {
+            this.shiftPosition(0, -this.dy);
+        }
+        
+        if(this.isAtLadderTop()){
+            console.log("ladder at top");
+            this.ignoreGravity = true;
+            this.fallSpeed = 0;
+        }
+    }
+
+    moveDown() {
+          //  this.velocity = 320;
+            this.animation.setAnimationIndex(2);
+            this.animation.length = 2;
+         
+            this.snapToLadder(this.x, this.y);
+               
+           // if(this.isHittingFloor() == false) {
+                this.shiftPosition(0, this.dy);
+          //  }   
+          this.resolveFloorCollision();   
+    }
+
+    snapToLadder(x, y) {    
+        let tiles = this.tileMap.getOverlappingTiles(x, y, 32, 64);
+
+        tiles.forEach(t => {
+            if(t.name === "ladder" && Math.abs(t.x * 32 - x) < 20) {
+                this.x = t.x * 32;
+            }
+        });
+    }
 
     isRopeSwinging() {
         let tiles = this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32);   
@@ -614,73 +680,6 @@ class Player extends MovingCharacter {
         this.dy = 4;  
     }
 
-    moveLeft() {  
-       // this.velocity = 350;
-        this.animation.setAnimationIndex(1); 
-        this.animation.length = 3;
-       
-        if(!this.isHittingLeftWall() && this.x > 0) {  
-            this.shiftPosition(-this.dx, 0);
-        }
-
-        this.resolveLeftWallCollision(); // TODO: Not being able to run through walls.
-        
-       
-    }
-
-     moveRight() {
-       // this.velocity = 350;
-        this.animation.setAnimationIndex(0);
-        this.animation.length = 3;    
-       
-        if(!this.isHittingRightWall() && this.x < 800) {  
-            this.shiftPosition(this.dx, 0);
-        }    
-        
-       this.resolveRightWallCollision();
-    }
-
-     moveUp() {  
-      // this.velocity = 320;
-        this.animation.setAnimationIndex(2);
-        this.animation.length = 2;
-
-            this.snapToLadder(this.x, this.y);
-        
-        if(!this.isHittingRoof() && !this.isAtLadderTop()) {
-            this.shiftPosition(0, -this.dy);
-        }
-        
-        if(this.isAtLadderTop()){
-            console.log("ladder at top");
-            this.ignoreGravity = true;
-            this.fallSpeed = 0;
-        }
-    }
-
-    moveDown() {
-          //  this.velocity = 320;
-            this.animation.setAnimationIndex(2);
-            this.animation.length = 2;
-         
-            this.snapToLadder(this.x, this.y);
-               
-           // if(this.isHittingFloor() == false) {
-                this.shiftPosition(0, this.dy);
-          //  }   
-          this.resolveFloorCollision();   
-    }
-
-    snapToLadder(x, y) {    
-        let tiles = this.tileMap.getOverlappingTiles(x, y, 32, 64);
-
-        tiles.forEach(t => {
-            if(t.name === "ladder" && Math.abs(t.x * 32 - x) < 20) {
-                this.x = t.x * 32;
-            }
-        });
-    }
-
     digHoleLeft() {
         if(this.isHittingFloor()) {
             tileMap.replaceTileBlock(this.x-31, this.y+32);
@@ -718,7 +717,7 @@ class Player extends MovingCharacter {
 
     update(delta) {
         super.update();
- //console.log("player coordinates: "+ Math.floor(player.x) + ", " + Math.floor(player.y));
+ 
       if (typeof this.animation.frame !== "number" || isNaN(this.animation.frame)) { this.animation.frame = 0; }
 
     this.animation.frame += this.velocity * delta * 0.03;
@@ -726,8 +725,6 @@ class Player extends MovingCharacter {
     if(this.velocity == 0) {
         this.animation.frame = 0;
     }
-
-    
 
          switch(true) {
             case this.playerAction.climb:
@@ -771,12 +768,7 @@ class Player extends MovingCharacter {
              default:
                  DEBUG && console.log("NORMAL");
                  this.dx = this.velocity * delta; this.dy = 0;
-
-                 
-
-                
-                    
-                 
+ 
                 // console.log("velocity:", delta);
                 break;        
         }
@@ -796,73 +788,51 @@ class NPC extends MovingCharacter {
 
     constructor(x, y, tilemap) {
         super(x, y, tilemap);
-        this.dx = 2;
-        this.dy = 2;
+       
         this.direction = "right";
         this.carryGold = false;
         this.enemies = [];
         this.animationIndex = 1;
+        this.velocity = 100;
+
+        this.junctions = undefined;
     }
 
     checkCollision() {
         return this.enemies.some(enemy => this.isCollidingWith(enemy));
     }
 
-    /*
-    collisionState(collisionState) {
-        if(collisionState) {
-            lives = lives > 0 ? lives-- : 0;
+    findCloseJunctions() {
+        let junctions = [];
+        let n = 1;
+        let tileLeft = null; let tileRight = null;
+
+        while(n < tileMap.width) {
+            let tileY = Math.floor(this.y / 32);
+            let tileX = Math.floor(this.x / 32);
+
+             if(tileX + n <= tileMap.width) {
+                tileRight = tileMap.blocks[tileY * tileMap.width + tileX + n];
+
+                 if(tileRight.name === "ladder") {
+                    junctions.push(tileRight);
+                 }
+            }
+
+            if(tileX - n >= 0) {
+                tileLeft = tileMap.blocks[tileY * tileMap.width + tileX - n];
+
+                if(tileLeft.name === "ladder") {
+                    junctions.push(tileLeft);
+                }
+            }
+
+           
+            n++;
         } 
-    }*/
 
-    moveLeft() {  
-        this.animation.setAnimationIndex(this.animationIndex); 
-      //  this.animation.updateFrameCounter();      
-        if(!this.isHittingLeftWall() && this.x > 0 && !this.checkCollision()) {  
-            this.shiftPosition(-this.dx, 0);
-        }
-    }
-
-     moveRight() {
-        this.animation.setAnimationIndex(this.animationIndex);
-     //   this.animation.updateFrameCounter();      
-
-        if(!this.isHittingRightWall() && this.x < 800 && !this.checkCollision()) {  
-            this.shiftPosition(this.dx, 0);
-        }   
-       
-    }
-
-     moveUp() {  
-       
-            this.animation.setAnimationIndex(this.animationIndex);
-          //  this.animation.updateFrameCounter();      
-
-            
-
-            if(!this.isHittingRoof() && !this.checkCollision()) {
-                this.shiftPosition(0, -this.dy);
-            }  
-            
-        
-    }
-
-    moveDown() {
-      
-            this.animation.setAnimationIndex(this.animationIndex);
-         //   this.animation.updateFrameCounter();      
-
-          
-            //     this.snapToLadder(this.x, this.y);
-            
-
-            /*
-            if(!this.isHittingFloor() && !this.checkCollision()) {
-
-               
-                this.shiftPosition(0, this.dy);
-                
-            }      */  
+        //console.log(junctions);
+        return junctions;
     }
 
     draw() {   
@@ -877,49 +847,82 @@ class NPC extends MovingCharacter {
         }
     }
 
-     update() {
+     update(delta) {
         super.update();
 
-        
+         if (typeof this.animation.frame !== "number" || isNaN(this.animation.frame)) { this.animation.frame = 0; }
 
-        switch(true) {
+    this.animation.frame += this.velocity * delta * 0.03;
+   
+    if(this.velocity == 0) {
+        this.animation.frame = 0;
+    }
+ 
+    if(!this.junctions) {
+        this.junctions = this.findCloseJunctions();
+    }
+    else {
+        if(this.junctions[1]) {
+            let secondLadder = this.junctions[1];
+            if(this.x < secondLadder.x) {
+                this.moveRight();
+            }
+            else {
+            
+                this.moveUp();
+               
+            }
+        }
+    }
+
+    this.direction = "";
+
+         switch(true) {
             case this.playerAction.climb:
-                //console.log("CLIMB");
-                this.dx = 2; this.dy = 2;
-                this.direction = "up";
-                this.animationIndex = 2;
+                DEBUG && console.log("CLIMB");
+              console.log("CLIMB");
+                this.dx = this.velocity * delta; this.dy = this.velocity * delta;
                 break;
              case this.playerAction.collect:
-               //  console.log("COLLECT") && DEBUG;
-                score++; // collect gold and increase score.
+                DEBUG && console.log("COLLECT");
+                
+                 this.collectGold();    
+                 this.tileMap.draw(bgCtx);
+                score+=250; // collect gold and increase score by 250.
                 
                 break;
-
-            
              case this.playerAction.dig:
-                // only for player.
+                //
                 break;
-
-
              case this.playerAction.fall:
-              //  console.log("Enemie FALL") && DEBUG;
-              //   this.animationIndex = 3;
-              //   this.animation.updateFrameCounter();
+               
+                 DEBUG && console.log("FALL");
+                 this.animation.setAnimationIndex(3);
+                 this.animation.length = 1;
                  
                 this.dx = 0; this.dy = 0; // disable user control while falling.
-                this.shiftPosition(0, 4);
+                this.shiftPosition(0, this.fallSpeed * delta);
+
+                if(this.isHittingFloor) {
+                  //  this.resolveFloorCollision();
+                }
+                
+                this.isAtLadderTop();
+
                 break;
             case this.playerAction.swing:
-             //   console.log("SWING") && DEBUG;
-              //  this.animationIndex = 4;
-              //  this.animation.delay = 10;
-                this.direction = "right";
-               // this.dy = 0;
+                DEBUG && console.log("SWING");
+                this.animation.setAnimationIndex(4);
+                
+                this.dx = this.velocity * delta; this.dy = this.velocity * delta;
                 break;
              default:
-               //  console.log("NORMAL ENEMIE") && DEBUG;
-               //  this.animationIndex = 0;
-                 this.dx = 2; this.dy = 0;
+                 DEBUG && console.log("NORMAL");
+                  
+                 this.dx = this.velocity * delta; this.dy = 0;
+              
+                 
+               
                 break;        
         }
 
@@ -938,7 +941,13 @@ class NPC extends MovingCharacter {
             break;
        }
 
-        
+         if(this.ignoreGravity) {
+                    this.ignoreGravity = false;
+                 }
+                 else {
+                    this.fallSpeed = 220;
+                 }
+
         this.draw();
     }
 }
@@ -966,9 +975,9 @@ async function buildBackground() {
 }
 
 const player = new Player(40,480, tileMap, {x: 300, y: 200});
-const npc1 = new NPC(0,480, tileMap);
-const npc2 = new NPC(0,480, tileMap);
-const npc3 = new NPC(0,480, tileMap);
+const npc1 = new NPC(140,480, tileMap);
+const npc2 = new NPC(180,480, tileMap);
+const npc3 = new NPC(100,480, tileMap);
 
 // Add references to the other objects.
 npc1.enemies.push(npc2, npc3);
@@ -989,9 +998,13 @@ collider.enemies.push(npc3);
 let lastTime = 0;
 
 function animate(time) {
+   
+   
     requestAnimationFrame(animate);
+        
+       
 
-    const delta = (time - lastTime) / 1000; // seconds
+    const delta = lastTime ? (time - lastTime) / 1000 : 0; // seconds
     lastTime = time;
 
    
@@ -1005,12 +1018,13 @@ function animate(time) {
     c.fillText(`men: ${lives}`, 350, 600);
     c.fillText(`level: ${level}`, 650, 600);
 
+   // if(!isNaN(delta)) {
      player.update(delta);
 
-     npc1.update();
-     npc2.update();
-     npc3.update();
-   
+     npc1.update(delta);
+     npc2.update(delta);
+     npc3.update(delta);
+    //}
     collider.checkCollision();
     //console.log(player.collisionState);
     //player.collisionState && score++;
@@ -1018,12 +1032,12 @@ function animate(time) {
 
 await buildBackground().then(() => {animate();
  });
-// window.addEventListener("load", ()=> {
+// window.addEventListener("click", ()=> {
 //     buildBackground().then(()=> {
 //         animate();
 //     });
 // });
-//animate();
+// animate();
 
 
 
