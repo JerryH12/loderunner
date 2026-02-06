@@ -1,5 +1,5 @@
 
-let DEBUG = true;
+let DEBUG = false;
 
 // Sound
 let audioCtx = null;
@@ -379,13 +379,16 @@ class MovingCharacter extends Entity {
         
         if(!this.isHittingRoof() && !this.isAtLadderTop()) {
             this.shiftPosition(0, -this.dy);
+           // this.resolveLadderTop();
         }
         
+        /*
         if(this.isAtLadderTop()){
             console.log("ladder at top");
             this.ignoreGravity = true;
             this.fallSpeed = 0;
-        }
+            this.resolveLadderTop();
+        }*/
     }
 
     moveDown() {
@@ -472,7 +475,11 @@ class MovingCharacter extends Entity {
             const tileLeft = t.x * 32;
 
             // Push player left
-            player.x = tileLeft - player.width;
+           // player.x = tileLeft - player.width;
+
+            // Correction 2026-02-05. Push this object left.
+            this.x = tileLeft - this.width;
+            // End of correction
 
             // Stop downward velocity
             //velocityY = 0;
@@ -493,7 +500,11 @@ class MovingCharacter extends Entity {
             const tileLeft = t.x * 32;
 
             // Push player right
-            player.x = tileLeft + player.width;
+            //player.x = tileLeft + player.width;
+
+            // Correction 2026-02-05. Push this object right.
+            this.x = tileLeft + this.width;
+            // End of correction.
 
             // Stop downward velocity
             //velocityY = 0;
@@ -515,8 +526,12 @@ class MovingCharacter extends Entity {
                 const tileTop = t.y * 32;
 
                 // Push player up
-                // player.y = tileTop - player.height;
-                player.y = tileTop - this.height;
+                //player.y = tileTop - this.height;
+
+                // Correction 2026-02-05. Push this object up.
+                this.y = tileTop - this.height;
+                // End of correction
+
                 // Stop downward velocity
                 //velocityY = 0;
                this.fallSpeed = 0;
@@ -551,40 +566,37 @@ class MovingCharacter extends Entity {
         //
     }
 
+    resolveLadderTop() {
+        const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
+        const hitboxY = this.y + (32 - this.hitboxHeight);
+
+        const feetX = hitboxX + this.hitboxWidth / 2;
+        const feetY = hitboxY + this.hitboxHeight;
+
+        const tileX = Math.floor(feetX / 32);
+        const tileY = Math.floor(feetY / 32);
+
+        const feetTile = this.tileMap.blocks[tileY * this.tileMap.width + tileX];
+        const tileBelowFeet = this.tileMap.blocks[(tileY + 1) * this.tileMap.width + tileX];
+
+        if(tileBelowFeet.name === "ladder" && feetTile.name === "empty" && Math.abs(feetY - tileBelowFeet.y) < 4) {
+        this.y = tileBelowFeet.y - 32;
+        }
+    }
+
     isAtLadderTop() {
         
-        
+        const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
+        const hitboxY = this.y + (32 - this.hitboxHeight);
 
-        //  const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
-        //  const hitboxY = this.y + (32 - this.hitboxHeight);
+        const feetX = hitboxX + this.hitboxWidth / 2;
+        const feetY = hitboxY + this.hitboxHeight;
 
-       
-        // const tileBelow = this.tileMap.getTileBlock(hitboxX, hitboxY + 32);
-       
-        // const tileAbove = this.tileMap.getTileBlock(hitboxX, hitboxY);
-        
-    //    const feetX = hitboxX + this.hitboxWidth / 2; 
-    //    const feetY = hitboxY + this.hitboxHeight; 
-    //    const tileX = Math.floor(feetX / 32); 
-    //    const tileY = Math.floor(feetY / 32); 
-    //    const tileBelow = this.tileMap.blocks[tileY * this.tileMap.width + tileX]; 
-    //    const tileAbove = this.tileMap.blocks[(tileY - 1) * this.tileMap.width + tileX];
+        const tileX = Math.floor(feetX / 32);
+        const tileY = Math.floor(feetY / 32);
 
-    const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
-    const hitboxY = this.y + (32 - this.hitboxHeight);
-
-    const feetX = hitboxX + this.hitboxWidth / 2;
-    const feetY = hitboxY + this.hitboxHeight;
-
-    const tileX = Math.floor(feetX / 32);
-    const tileY = Math.floor(feetY / 32);
-
-    const feetTile = this.tileMap.blocks[tileY * this.tileMap.width + tileX];
-    const tileBelowFeet = this.tileMap.blocks[(tileY + 1) * this.tileMap.width + tileX];
-
-    if(tileBelowFeet.name === "ladder" && feetTile.name === "empty" && Math.abs(feetY - tileBelowFeet.y) < 4) {
-        this.y = tileBelowFeet.y - 32;
-    }
+        const feetTile = this.tileMap.blocks[tileY * this.tileMap.width + tileX];
+        const tileBelowFeet = this.tileMap.blocks[(tileY + 1) * this.tileMap.width + tileX];
 
         return (tileBelowFeet.name === "ladder" && feetTile.name === "empty");
     }
@@ -757,6 +769,7 @@ class Player extends MovingCharacter {
                 }
                 
                 this.isAtLadderTop();
+                this.resolveLadderTop();
 
                 break;
             case this.playerAction.swing:
@@ -795,44 +808,111 @@ class NPC extends MovingCharacter {
         this.animationIndex = 1;
         this.velocity = 100;
 
-        this.junctions = undefined;
+        this.junctions = [];
+        this.junctionPoint = null;
+        this.lastPlayerPosition = {x: 0, y: 0};
+
+        this.playerRef = undefined;
     }
+
+    // moveUp() {  
+    //   // this.velocity = 320;
+    //     this.animation.setAnimationIndex(2);
+    //     this.animation.length = 2;
+
+    //       //  this.snapToLadder(this.x, this.y);
+        
+    //     if(!this.isHittingRoof() && !this.isAtLadderTop()) {
+    //         this.shiftPosition(0, -this.dy);
+    //     }
+        
+    //     if(this.isAtLadderTop()){
+    //         console.log("ladder at top");
+    //         this.ignoreGravity = true;
+    //         this.fallSpeed = 0;
+    //     }
+    // }
 
     checkCollision() {
         return this.enemies.some(enemy => this.isCollidingWith(enemy));
     }
 
-    findCloseJunctions() {
+   
+
+    findJunctions() {
+        let junctionsUp = [];
+        let junctionsDown = [];
         let junctions = [];
         let n = 1;
         let tileLeft = null; let tileRight = null;
+        let tileLeftBelow = null; let tileRightBelow = null;
+
+        let tileY = Math.floor(this.y / 32);
+        let tileX = Math.floor(this.x / 32);
+
+        let tile = tileMap.blocks[tileY * tileMap.width + tileX];
+        let tileBelow = tileMap.blocks[(tileY + 1) * tileMap.width + tileX];
+
+        if(tile.name === "ladder") {
+            junctionsUp.push(tile);
+        }
+
+         else if(tileBelow.name === "ladder") {
+            junctionsDown.push(tile);
+        }
+       else {
 
         while(n < tileMap.width) {
-            let tileY = Math.floor(this.y / 32);
-            let tileX = Math.floor(this.x / 32);
+            tileY = Math.floor(this.y / 32);
+            tileX = Math.floor(this.x / 32);
 
-             if(tileX + n <= tileMap.width) {
-                tileRight = tileMap.blocks[tileY * tileMap.width + tileX + n];
-
+            if(tileX + n <= tileMap.width) {
+                tileRight = tileMap.blocks[tileY * tileMap.width + tileX + n];       
+                tileRightBelow = tileMap.blocks[(tileY + 1) * tileMap.width + tileX + n];
+                 
                  if(tileRight.name === "ladder") {
-                    junctions.push(tileRight);
+                    junctionsUp.push(tileRight);
                  }
+            
+                 if(tileRightBelow) {
+                    if(tileRightBelow.name === "ladder") {
+                        junctionsDown.push(tileRightBelow);
+                    }   
+                }     
             }
-
+     
             if(tileX - n >= 0) {
-                tileLeft = tileMap.blocks[tileY * tileMap.width + tileX - n];
+                tileLeft = tileMap.blocks[tileY * tileMap.width + tileX - n ];
+                tileLeftBelow = tileMap.blocks[(tileY + 1) * tileMap.width + tileX - n];
 
                 if(tileLeft.name === "ladder") {
-                    junctions.push(tileLeft);
+                    junctionsUp.push(tileLeft);
+                }
+
+                if(tileLeftBelow) {
+                    if(tileLeftBelow.name === "ladder") {
+                        junctionsDown.push(tileLeftBelow);
+                    }
                 }
             }
-
-           
+      
             n++;
         } 
 
-        //console.log(junctions);
+    }
+
+        // Prioritize junctions up or down depending on where the player is.
+       if(this.playerRef.y < this.y) {
+           junctions = junctionsUp.concat(junctionsDown);
+           
+       }
+       else {
+        junctions = junctionsDown.concat(junctionsUp);
+       }
+console.log(junctions);
         return junctions;
+
+    //return junctionsUp;
     }
 
     draw() {   
@@ -858,37 +938,79 @@ class NPC extends MovingCharacter {
         this.animation.frame = 0;
     }
  
-    if(!this.junctions) {
-        this.junctions = this.findCloseJunctions();
-    }
-    else {
-        if(this.junctions[1]) {
-            let secondLadder = this.junctions[1];
-            if(this.x < secondLadder.x) {
-                this.moveRight();
-            }
-            else {
-            
-                this.moveUp();
-               
-            }
-        }
+    
+
+    if(this.playerRef.y !== this.y && this.playerRef.y !== this.lastPlayerPosition.y) {
+        this.junctions = this.findJunctions();
+        console.log(this.junctions);
+        this.junctionPoint = this.junctions.shift();
+         console.log("found a junction point");
     }
 
-    this.direction = "";
+        /* let tiles = (this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32));
+
+         for (let t of tiles) { 
+            if(t.name === "ladder") {
+                this.x = t.x;
+            }
+        };*/
+   
+         if(this.isAtLadderTop()) {
+                        
+                        console.log("now i am at the top");
+                        this.junctions = this.findJunctions();
+                        this.junctionPoint = this.junctions.shift();
+                    }
+
+        if(this.junctionPoint) {   
+            
+            if(Math.round(this.x) < this.junctionPoint.x) {
+                console.log("right");
+                this.moveRight();
+                console.log(this.x);
+            }
+            else if(Math.round(this.x) > this.junctionPoint.x) {
+                console.log("left");
+                this.moveLeft();
+                console.log(this.x);
+            }  
+             else if(Math.round(this.y) > this.playerRef.y) {
+               
+                    this.moveUp();
+                    console.log(this.y);
+                   
+                    console.log("UP");
+                    this.ignoreGravity = true;
+                    this.fallSpeed = 0;
+                   
+                }
+                else if(Math.round(this.y) < this.playerRef.y) {
+                  
+               
+                    this.moveDown();
+                           
+                    console.log("DOWN");
+                                   
+            }
+  
+        }
+        
 
          switch(true) {
             case this.playerAction.climb:
-                DEBUG && console.log("CLIMB");
+                DEBUG && console.log("enemy CLIMB");
               console.log("CLIMB");
-                this.dx = this.velocity * delta; this.dy = this.velocity * delta;
+                this.dx = 1;//this.velocity * delta; 
+                 this.dy = 1;//this.velocity * delta;
                 break;
              case this.playerAction.collect:
                 DEBUG && console.log("COLLECT");
                 
-                 this.collectGold();    
-                 this.tileMap.draw(bgCtx);
-                score+=250; // collect gold and increase score by 250.
+                 // TODO: NPC doesn't have this function. Different behavior than player.
+                 //this.collectGold();  
+                  
+                 //this.tileMap.draw(bgCtx);
+                //score+=250; // collect gold and increase score by 250.
                 
                 break;
              case this.playerAction.dig:
@@ -901,13 +1023,13 @@ class NPC extends MovingCharacter {
                  this.animation.length = 1;
                  
                 this.dx = 0; this.dy = 0; // disable user control while falling.
-                this.shiftPosition(0, this.fallSpeed * delta);
-
+                //this.shiftPosition(0, this.fallSpeed * delta);
+                this.shiftPosition(0,1);
                 if(this.isHittingFloor) {
                   //  this.resolveFloorCollision();
                 }
                 
-                this.isAtLadderTop();
+                this.resolveLadderTop();
 
                 break;
             case this.playerAction.swing:
@@ -919,27 +1041,16 @@ class NPC extends MovingCharacter {
              default:
                  DEBUG && console.log("NORMAL");
                   
-                 this.dx = this.velocity * delta; this.dy = 0;
+                 //this.dx = this.velocity * delta; this.dy = 0;
               
+                 this.dx = 1;
                  
                
                 break;        
         }
 
-       switch(this.direction) {
-        case "left":
-            this.moveLeft();
-            break;
-        case "right":
-            this.moveRight();
-            break;
-        case "up":
-            this.moveUp();
-            break;
-        case "down":
-            this.moveDown();
-            break;
-       }
+       this.lastPlayerPosition.x = this.playerRef.x;
+        this.lastPlayerPosition.y = this.playerRef.y;
 
          if(this.ignoreGravity) {
                     this.ignoreGravity = false;
@@ -950,6 +1061,7 @@ class NPC extends MovingCharacter {
 
         this.draw();
     }
+    
 }
 
 // Create a tilemap from data.
@@ -974,15 +1086,20 @@ async function buildBackground() {
     tileMap.draw(bgCtx);
 }
 
+// TODO: Global variabel orsakar problem när den anropas i klasser.
 const player = new Player(40,480, tileMap, {x: 300, y: 200});
-const npc1 = new NPC(140,480, tileMap);
-const npc2 = new NPC(180,480, tileMap);
-const npc3 = new NPC(100,480, tileMap);
+const npc1 = new NPC(680,480, tileMap);
+const npc2 = new NPC(730,480, tileMap);
+const npc3 = new NPC(700,480, tileMap);
 
 // Add references to the other objects.
 npc1.enemies.push(npc2, npc3);
 npc2.enemies.push(npc1, npc3);
 npc3.enemies.push(npc1, npc2);
+
+npc1.playerRef = player;
+npc2.playerRef = player;
+npc3.playerRef = player;
 
 // add animations to characters
 player.addAnimation(playerAnimation);
@@ -1019,11 +1136,13 @@ function animate(time) {
     c.fillText(`level: ${level}`, 650, 600);
 
    // if(!isNaN(delta)) {
-     player.update(delta);
+    player.update(delta);
 
      npc1.update(delta);
      npc2.update(delta);
      npc3.update(delta);
+
+      
     //}
     collider.checkCollision();
     //console.log(player.collisionState);
