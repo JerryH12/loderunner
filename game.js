@@ -85,23 +85,26 @@ let direction = "left";
 var maxRadius = 40;
 var minRadius = 2;
 
-
+let pressedKeys = new Set();
 
 window.addEventListener('keydown', function(event){
+    player.setInput(event.code);
+    pressedKeys.add(event.code);
+
     if(event.code === "ArrowLeft") {
-        player.moveLeft();
+       // player.moveLeft();
     }
 
     if(event.code === "ArrowRight") {
-        player.moveRight();
+      //  player.moveRight();
     }
 
      if(event.code === "ArrowUp") {
-        player.moveUp();
+       // player.moveUp();
     }
 
     if(event.code === "ArrowDown") {
-        player.moveDown();
+      //  player.moveDown();
     }
 
     if(event.code === "KeyZ") {
@@ -115,6 +118,10 @@ window.addEventListener('keydown', function(event){
 
 window.addEventListener("keyup", function(event) {
     player.animation.length = 1;
+    
+     player.setInput("");
+   
+   
 });
 
 const collider = {
@@ -123,8 +130,7 @@ const collider = {
     checkCollision: function() { 
         const isCollided = this.enemies.some((enemy)=> player.isCollidingWith(enemy));
         player.setCollisionState(isCollided);
-    },
-   
+    }, 
 };
 
 class Animation {
@@ -330,11 +336,18 @@ class MovingCharacter extends Entity {
         this.fallSpeed = 200;
         this.lastTime = 0;
 
+        // will replace dx and dy.
+        this.velocityX;
+        this.velocityY;
+
         this.hitboxWidth = 20;
         this.hitboxHeight = 28;
 
         this.ignoreGravity = false;
         this.justExitedLadder = false;
+
+        // Initial state
+        this.currentState = "idle";
     }
 
     addAnimation(animation) {
@@ -606,7 +619,8 @@ class MovingCharacter extends Entity {
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
          let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight);
-        return tiles.some(t => t.name === "ladder" && t.x * 32 === this.x);
+      //  return tiles.some(t => t.name === "ladder" && t.x * 32 === this.x);
+      return tiles.some(t => t.name === "ladder");
     }
 
     isFreefalling() {
@@ -690,6 +704,18 @@ class Player extends MovingCharacter {
 
         this.dx = 4;
         this.dy = 4;  
+
+        this.input = "";
+    }
+
+    setInput(input) {
+
+        this.input = input;
+
+       
+        
+    console.log(this.currentState);
+
     }
 
     digHoleLeft() {
@@ -738,53 +764,53 @@ class Player extends MovingCharacter {
         this.animation.frame = 0;
     }
 
-         switch(true) {
-            case this.playerAction.climb:
-                DEBUG && console.log("CLIMB");
+        //  switch(true) {
+        //     case this.playerAction.climb:
+        //         DEBUG && console.log("CLIMB");
               
-                this.dx = this.velocity * delta; this.dy = this.velocity * delta;
-                break;
-             case this.playerAction.collect:
-                DEBUG && console.log("COLLECT");
+        //         this.dx = this.velocity * delta; this.dy = this.velocity * delta;
+        //         break;
+        //      case this.playerAction.collect:
+        //         DEBUG && console.log("COLLECT");
                 
-                 this.collectGold();    
-                 this.tileMap.draw(bgCtx);
-                score+=250; // collect gold and increase score by 250.
+        //          this.collectGold();    
+        //          this.tileMap.draw(bgCtx);
+        //         score+=250; // collect gold and increase score by 250.
                 
-                break;
-             case this.playerAction.dig:
-                //
-                break;
-             case this.playerAction.fall:
-               
-                 DEBUG && console.log("FALL");
-                 this.animation.setAnimationIndex(3);
-                 this.animation.length = 1;
+        //         break;
+        //      case this.playerAction.dig:
+        //         //
+        //         break;
+        //      case this.playerAction.fall:
+        //        /*
+        //          DEBUG && console.log("FALL");
+        //          this.animation.setAnimationIndex(3);
+        //          this.animation.length = 1;
                  
-                this.dx = 0; this.dy = 0; // disable user control while falling.
-                this.shiftPosition(0, this.fallSpeed * delta);
+        //         this.dx = 0; this.dy = 0; // disable user control while falling.
+        //         this.shiftPosition(0, this.fallSpeed * delta);
 
-                if(this.isHittingFloor) {
-                    this.resolveFloorCollision();
-                }
+        //         if(this.isHittingFloor) {
+        //             this.resolveFloorCollision();
+        //         }
                 
-                this.isAtLadderTop();
-                this.resolveLadderTop();
+        //         this.isAtLadderTop();
+        //         this.resolveLadderTop();*/
 
-                break;
-            case this.playerAction.swing:
-                DEBUG && console.log("SWING");
-                this.animation.setAnimationIndex(4);
+        //         break;
+        //     case this.playerAction.swing:
+        //         DEBUG && console.log("SWING");
+        //         this.animation.setAnimationIndex(4);
                 
-                this.dx = this.velocity * delta; this.dy = this.velocity * delta;
-                break;
-             default:
-                 DEBUG && console.log("NORMAL");
-                 this.dx = this.velocity * delta; this.dy = 0;
+        //         this.dx = this.velocity * delta; this.dy = this.velocity * delta;
+        //         break;
+        //      default:
+        //          DEBUG && console.log("NORMAL");
+        //          this.dx = this.velocity * delta; this.dy = 0;
  
-                // console.log("velocity:", delta);
-                break;        
-        }
+        //         // console.log("velocity:", delta);
+        //         break;        
+        // }
 
         if(this.ignoreGravity) {
                     this.ignoreGravity = false;
@@ -792,7 +818,178 @@ class Player extends MovingCharacter {
                  else {
                     this.fallSpeed = 220;
                  }
-        
+
+         const state = Object.freeze({
+            CLIMB: "climb",
+            DIG: "dig",
+            FALL: "fall",
+            SWING: "swing",
+            IDLE: "idle",
+            WALK: "walk",
+            COLLECT: "collect",
+            SHOOT: "shoot"
+        });
+
+        console.log(this.input);
+
+         switch(this.currentState) {
+            // Climb
+            case state.CLIMB:
+                console.log("climb............");
+                this.velocityX = 0; this.velocityY = this.velocity * delta;
+
+                this.animation.setAnimationIndex(2);
+                this.animation.length = 2;
+
+                if(this.input === "ArrowUp") {
+                    this.snapToLadder(this.x, this.y);
+
+                    if(!this.isHittingRoof() && !this.isAtLadderTop()) {
+                        this.shiftPosition(this.velocityX, -this.velocityY);
+                    }
+                }
+              
+                 if(this.input === "ArrowDown") {
+                    this.snapToLadder(this.x, this.y);
+                    this.shiftPosition(this.velocityX, this.velocityY);
+                    this.resolveFloorCollision();
+                }
+
+                if(this.input === "ArrowLeft") {
+                    this.currentState = "walk";
+                }
+
+                 if(this.input === "ArrowRight") {
+                    this.currentState = "walk";
+                }
+                break;
+            // Collect
+             case state.COLLECT:
+                    
+                 this.collectGold();    
+                 this.tileMap.draw(bgCtx);
+                score+=250; // collect gold and increase the score by 250.
+                
+                break;
+            // Dig
+             case state.DIG:
+                if(this.input === "KeyZ") {
+                    this.digHoleLeft();
+                }
+
+                 if(this.input === "KeyX") {
+                    this.digHoleRight();
+                }
+                
+                break;
+            // Fall
+             case state.FALL:    
+                 console.log("state=FALL");
+                 this.animation.setAnimationIndex(3);
+                 this.animation.length = 1;
+
+                 this.velocityX = 0; this.velocityY = this.fallSpeed * delta;
+                
+                this.shiftPosition(this.velocityX, this.velocityY);
+
+                if(this.isHittingFloor()) {
+                        this.resolveFloorCollision();
+                        this.currentState = "idle";
+                    }
+     
+               if(this.isClimbingLadder()) {
+                   this.currentState = "climb";
+               }
+               
+                break;
+            // Swing
+            case state.SWING:
+               
+                this.animation.setAnimationIndex(4);
+                
+                this.velocityX = this.velocity * delta; this.velocityY = this.velocity * delta;
+                break;
+            // Walk
+             case state.WALK:
+                
+                console.log("walking");
+                this.velocityY = 0;
+
+                if(this.input === "ArrowLeft") {
+                         
+                    this.velocityX = -this.velocity * delta; 
+                   
+                    if(this.x > 0 && !this.isHittingLeftWall()) {
+                        this.shiftPosition(this.velocityX, this.velocityY);
+                        this.resolveLeftWallCollision();
+                    }
+          
+                   
+                    
+                    this.animation.setAnimationIndex(1); 
+                }
+
+               if(this.input === "ArrowRight") {
+                     
+                    this.velocityX = this.velocity * delta;
+                    
+                    if(this.x < 800 && !this.isHittingRightWall()) {
+                        this.shiftPosition(this.velocityX, this.velocityY);  
+                        this.resolveRightWallCollision();     
+                    }
+
+                     this.animation.setAnimationIndex(0); 
+                }
+
+                 if(this.input === "") {
+                   
+                
+                    this.currentState = "idle";
+                }
+              
+                // animation    
+                this.animation.length = 3;
+            
+                // move
+                //if(!this.isHittingLeftWall() && this.x > 0) {  
+                  //  this.shiftPosition(this.velocityX, this.velocityY);
+               //}
+
+               // TODO. Won't work unless I know which direction I'm moving. 
+                // resolve
+               // this.resolveLeftWallCollision();
+
+               if(this.isFreefalling()) {
+                this.currentState = "fall";
+               }
+                // on key up or velocity 0 return to idle.
+                
+                break; 
+            // Idle
+            case state.IDLE:
+                console.log("IDLE");
+               this.animation.length = 1;
+
+                this.velocityX = 0;
+                this.velocityY = 0;
+
+                // Idle next to a ladder.
+                if(this.isClimbingLadder()) {
+                   this.currentState = "climb";
+                   //this.snapToLadder();
+                }
+
+                if(this.input === "ArrowLeft" || this.input === "ArrowRight") {       
+                    this.currentState = "walk";   
+                }
+ 
+                break;
+            // Shoot
+            case state.SHOOT:
+                // TODO
+                break;
+        }
+
         this.draw();
     }
 }
@@ -833,11 +1030,18 @@ class NPC extends MovingCharacter {
     //     }
     // }
 
+    /*
     checkCollision() {
         return this.enemies.some(enemy => this.isCollidingWith(enemy));
-    }
+    }*/
 
-   
+    isCloseTo(npc) {
+         return(
+            (this.x + this.width) >= npc.x && 
+            this.x <= (npc.x + npc.width) && 
+            (this.y + this.height) >= npc.y &&
+            this.y <= (npc.y + npc.height));  
+    }
 
     findJunctions() {
         let junctionsUp = [];
@@ -909,7 +1113,7 @@ class NPC extends MovingCharacter {
        else {
         junctions = junctionsDown.concat(junctionsUp);
        }
-console.log(junctions);
+       // console.log(junctions);
         return junctions;
 
     //return junctionsUp;
@@ -940,24 +1144,20 @@ console.log(junctions);
  
     
 
+    
+
     if(this.playerRef.y !== this.y && this.playerRef.y !== this.lastPlayerPosition.y) {
         this.junctions = this.findJunctions();
-        console.log(this.junctions);
+       // console.log(this.junctions);
         this.junctionPoint = this.junctions.shift();
-         console.log("found a junction point");
+      //   console.log("found a junction point");
     }
 
-        /* let tiles = (this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32));
-
-         for (let t of tiles) { 
-            if(t.name === "ladder") {
-                this.x = t.x;
-            }
-        };*/
+        
    
          if(this.isAtLadderTop()) {
                         
-                        console.log("now i am at the top");
+                     //   console.log("now i am at the top");
                         this.junctions = this.findJunctions();
                         this.junctionPoint = this.junctions.shift();
                     }
@@ -965,23 +1165,56 @@ console.log(junctions);
         if(this.junctionPoint) {   
             
             if(Math.round(this.x) < this.junctionPoint.x) {
-                console.log("right");
+              //  console.log("right");
                 this.moveRight();
-                console.log(this.x);
+             //   console.log(this.x);
+
+                    this.enemies.forEach(enemy => {
+                    if(this.isCloseTo(enemy)) {
+                        
+                        this.x += Math.sign(this.x - enemy.x) * 1;
+                    
+                        //    this.y += Math.sign(this.y - enemy.y) * 0.5;
+                        
+                    
+                    }
+                });
             }
             else if(Math.round(this.x) > this.junctionPoint.x) {
-                console.log("left");
+              //  console.log("left");
                 this.moveLeft();
-                console.log(this.x);
+              //  console.log(this.x);
+
+                 this.enemies.forEach(enemy => {
+                    if(this.isCloseTo(enemy)) {
+                        
+                        this.x += Math.sign(this.x - enemy.x) * 0.5;
+                    
+                        //    this.y += Math.sign(this.y - enemy.y) * 0.5;
+                        
+                    
+                    }
+                });
             }  
              else if(Math.round(this.y) > this.playerRef.y) {
                
                     this.moveUp();
-                    console.log(this.y);
+                 //   console.log(this.y);
                    
-                    console.log("UP");
+               //    console.log("UP");
                     this.ignoreGravity = true;
                     this.fallSpeed = 0;
+
+                     this.enemies.forEach(enemy => {
+                    if(this.isCloseTo(enemy)) {
+                        
+                       // this.x += Math.sign(this.x - enemy.x) * 1;
+                    
+                            this.y += Math.sign(this.y - enemy.y) * 0.5;
+                        
+                    
+                    }
+                });
                    
                 }
                 else if(Math.round(this.y) < this.playerRef.y) {
@@ -989,7 +1222,18 @@ console.log(junctions);
                
                     this.moveDown();
                            
-                    console.log("DOWN");
+                  //  console.log("DOWN");
+
+                     this.enemies.forEach(enemy => {
+                    if(this.isCloseTo(enemy)) {
+                        
+                      //  this.x += Math.sign(this.x - enemy.x) * 1;
+                    
+                            this.y += Math.sign(this.y - enemy.y) * 0.5;
+                        
+                    
+                    }
+                });
                                    
             }
   
@@ -999,7 +1243,7 @@ console.log(junctions);
          switch(true) {
             case this.playerAction.climb:
                 DEBUG && console.log("enemy CLIMB");
-              console.log("CLIMB");
+             // console.log("CLIMB");
                 this.dx = 1;//this.velocity * delta; 
                  this.dy = 1;//this.velocity * delta;
                 break;
@@ -1113,7 +1357,7 @@ collider.enemies.push(npc2);
 collider.enemies.push(npc3);
 
 let lastTime = 0;
-
+let delta = 0;
 function animate(time) {
    
    
@@ -1121,7 +1365,8 @@ function animate(time) {
         
        
 
-    const delta = lastTime ? (time - lastTime) / 1000 : 0; // seconds
+    delta = lastTime ? (time - lastTime) / 1000 : 0; // seconds
+    delta = Math.min(delta, 0.017);
     lastTime = time;
 
    
