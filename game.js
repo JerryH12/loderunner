@@ -563,15 +563,22 @@ class MovingCharacter extends Entity {
     }
 
     isHittingRoof() {
-        const neighborUpLeft =  this.tileMap.getTileBlock(this.x, this.y-32);
-        const neighborUpRight = this.tileMap.getTileBlock(this.x+31, this.y-32);
+        // const neighborUpLeft =  this.tileMap.getTileBlock(this.x, this.y-32);
+        // const neighborUpRight = this.tileMap.getTileBlock(this.x+31, this.y-32);
 
-         if((this.isCollidingWith(neighborUpLeft) && neighborUpLeft.name == "wall")
-                || (this.isCollidingWith(neighborUpRight) && neighborUpRight.name == "wall")) {
+        //  if((this.isCollidingWith(neighborUpLeft) && neighborUpLeft.name == "wall")
+        //         || (this.isCollidingWith(neighborUpRight) && neighborUpRight.name == "wall")) {
                        
-                return true; 
-        }
-        return false;
+        //         return true; 
+        // }
+        // return false;
+
+        const hitboxX = this.x;// + (32 - this.hitboxWidth) / 2;
+        const hitboxY = this.y;// + (32 - this.hitboxHeight);
+        
+        //let tiles = this.tileMap.getOverlappingTiles(this.x, this.y+1, 32, 32); 
+        let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight); 
+        return tiles.some(t => t.name === "wall"); 
     }
 
     // possibly only for controlled player.
@@ -940,10 +947,14 @@ class Player extends MovingCharacter {
                  if(this.input === "ArrowDown") {
                     this.currentState = "fall";
                 }
+                
                 if(this.isClimbingLadder()) {
                     this.currentState = "climb";
                 }
 
+                if(!this.isRopeSwinging()) {
+                    this.currentState = "fall";
+                }
                 break;
             // Walk
              case state.WALK:
