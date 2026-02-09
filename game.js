@@ -58,7 +58,7 @@ bgCtx.fillStyle = 'blue';
 
  //let tileMap = await fetchCSV();
 
-const textString = await fetch("http://127.0.0.1:5500/levels/level2.CSV").then(r => r.text())
+const textString = await fetch("http://127.0.0.1:5500/levels/level1.CSV").then(r => r.text())
 
 
  let rawMap = textString.split(",").map(m => m.trim());
@@ -332,7 +332,7 @@ class MovingCharacter extends Entity {
         this.dx = 4;
         this.dy = 4;
         this.animation = null;
-        this.velocity = 350;
+        this.velocity = 300;
         this.fallSpeed = 200;
         this.lastTime = 0;
 
@@ -603,7 +603,7 @@ class MovingCharacter extends Entity {
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
         const feetX = hitboxX + this.hitboxWidth / 2;
-        const feetY = hitboxY + this.hitboxHeight;
+        const feetY = Math.round(this.y)+31;//hitboxY + this.hitboxHeight;
 
         const tileX = Math.floor(feetX / 32);
         const tileY = Math.floor(feetY / 32);
@@ -620,7 +620,7 @@ class MovingCharacter extends Entity {
 
          let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight);
       //  return tiles.some(t => t.name === "ladder" && t.x * 32 === this.x);
-      return tiles.some(t => t.name === "ladder");
+      return tiles.some(t => t.name === "ladder" && Math.abs(t.x * 32 - hitboxX) < 16);
     }
 
     isFreefalling() {
@@ -836,23 +836,32 @@ class Player extends MovingCharacter {
             // Climb
             case state.CLIMB:
                 console.log("climb............");
-                this.velocityX = 0; this.velocityY = this.velocity * delta;
+                this.velocityX = 0; this.velocityY = 150 * delta;
 
                 this.animation.setAnimationIndex(2);
-                this.animation.length = 2;
+                this.animation.length = 1;
 
                 if(this.input === "ArrowUp") {
                     this.snapToLadder(this.x, this.y);
 
                     if(!this.isHittingRoof() && !this.isAtLadderTop()) {
                         this.shiftPosition(this.velocityX, -this.velocityY);
+                        this.resolveLadderTop();
                     }
+
+                    this.animation.length = 2;
                 }
               
                  if(this.input === "ArrowDown") {
                     this.snapToLadder(this.x, this.y);
                     this.shiftPosition(this.velocityX, this.velocityY);
                     this.resolveFloorCollision();
+
+                     if(!this.isClimbingLadder()) {
+                        this.currentState = "fall";
+                    }
+
+                    this.animation.length = 2;
                 }
 
                 if(this.input === "ArrowLeft") {
@@ -862,6 +871,7 @@ class Player extends MovingCharacter {
                  if(this.input === "ArrowRight") {
                     this.currentState = "walk";
                 }
+
                 break;
             // Collect
              case state.COLLECT:
@@ -870,6 +880,7 @@ class Player extends MovingCharacter {
                  this.tileMap.draw(bgCtx);
                 score+=250; // collect gold and increase the score by 250.
                 
+                this.currentState = "fall";
                 break;
             // Dig
              case state.DIG:
@@ -901,13 +912,38 @@ class Player extends MovingCharacter {
                    this.currentState = "climb";
                }
                
+               if(this.isCollectingGold()) {
+                    this.currentState = "collect";
+               }
+
+               if(this.isRopeSwinging()) {
+                    this.currentState = "swing";
+               }
                 break;
             // Swing
             case state.SWING:
                
                 this.animation.setAnimationIndex(4);
-                
-                this.velocityX = this.velocity * delta; this.velocityY = this.velocity * delta;
+                this.animation.length = 1;
+                this.velocityX = this.velocity * delta; this.velocityY = 0;
+
+                if(this.input === "ArrowLeft") {
+                    this.shiftPosition(-this.velocityX, this.velocityY);
+                    this.animation.length = 3;
+                }
+
+                if(this.input === "ArrowRight") {
+                    this.shiftPosition(this.velocityX, this.velocityY);
+                    this.animation.length = 3;
+                }
+
+                 if(this.input === "ArrowDown") {
+                    this.currentState = "fall";
+                }
+                if(this.isClimbingLadder()) {
+                    this.currentState = "climb";
+                }
+
                 break;
             // Walk
              case state.WALK:
@@ -964,6 +1000,13 @@ class Player extends MovingCharacter {
                }
                 // on key up or velocity 0 return to idle.
                 
+                if(this.isCollectingGold()) {
+                    this.currentState = "collect";
+                }
+
+                if(this.isRopeSwinging()) {
+                    this.currentState = "swing";
+                }
                 break; 
             // Idle
             case state.IDLE:
