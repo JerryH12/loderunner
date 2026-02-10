@@ -75,45 +75,32 @@ var colorArray = [
     '#2980B9'
 ];
 
-var mouse = {
-    x: undefined,
-    y: undefined
-}
-
-let direction = "left";
-
-var maxRadius = 40;
-var minRadius = 2;
-
-let pressedKeys = new Set();
-
 window.addEventListener('keydown', function(event){
     player.setInput(event.code);
-    pressedKeys.add(event.code);
 
-    if(event.code === "ArrowLeft") {
-       // player.moveLeft();
-    }
+    // if(event.code === "ArrowLeft") {
+    //    // player.moveLeft();
+    // }
 
-    if(event.code === "ArrowRight") {
-      //  player.moveRight();
-    }
+    // if(event.code === "ArrowRight") {
+    //   //  player.moveRight();
+    // }
 
-     if(event.code === "ArrowUp") {
-       // player.moveUp();
-    }
+    //  if(event.code === "ArrowUp") {
+    //    // player.moveUp();
+    // }
 
-    if(event.code === "ArrowDown") {
-      //  player.moveDown();
-    }
+    // if(event.code === "ArrowDown") {
+    //   //  player.moveDown();
+    // }
 
-    if(event.code === "KeyZ") {
-        player.digHoleLeft();
-    }
+    // if(event.code === "KeyZ") {
+    //     player.digHoleLeft();
+    // }
 
-    if(event.code === "KeyX") {
-        player.digHoleRight();
-    }
+    // if(event.code === "KeyX") {
+    //     player.digHoleRight();
+    // }
 });
 
 window.addEventListener("keyup", function(event) {
@@ -757,6 +744,11 @@ class Player extends MovingCharacter {
         }
         else {
             this.animation.animate(this.x, this.y);
+
+             // For easier bug fixing. Remove later.
+            c.font = "24px Arial";
+            c.fillStyle = "yellow";
+            c.fillText(this.currentState, this.x, this.y - 8);
         }
     }
 
@@ -826,6 +818,7 @@ class Player extends MovingCharacter {
                     this.fallSpeed = 220;
                  }
 
+        // state object
          const state = Object.freeze({
             CLIMB: "climb",
             DIG: "dig",
@@ -833,8 +826,7 @@ class Player extends MovingCharacter {
             SWING: "swing",
             IDLE: "idle",
             WALK: "walk",
-            COLLECT: "collect",
-            SHOOT: "shoot"
+            COLLECT: "collect"
         });
 
         console.log(this.input);
@@ -899,6 +891,10 @@ class Player extends MovingCharacter {
                     this.digHoleRight();
                 }
                 
+                if(this.input === "") {
+                    this.currentState = "idle";
+                }
+
                 break;
             // Fall
              case state.FALL:    
@@ -1037,11 +1033,12 @@ class Player extends MovingCharacter {
                     this.currentState = "walk";   
                 }
  
+                if(this.input === "KeyZ" || this.input === "KeyX") {
+                    this.currentState = "dig";
+                }
+
                 break;
-            // Shoot
-            case state.SHOOT:
-                // TODO
-                break;
+            
         }
 
         this.draw();
