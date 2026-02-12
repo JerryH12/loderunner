@@ -409,7 +409,7 @@ class MovingCharacter extends Entity {
 
         tiles.forEach(t => {
             if(t.name === "ladder" && Math.abs(t.x * 32 - x) < 20) {
-                this.x = t.x * 32;
+                this.x = t.x * 32; // Snap pixel perfect.
             }
         });
     }
@@ -634,6 +634,17 @@ class MovingCharacter extends Entity {
             ));
     }
 
+    collectGold() {
+        let tiles = this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32);
+        tiles.forEach(t => {
+            if(t.name === "gold") {
+                this.tileMap.replaceTileBlock(t.x * 32, t.y * 32);
+               
+               
+            }
+        });
+    }
+
     updatePlayerAction() {  
         this.playerAction.collect = this.isCollectingGold(); 
 
@@ -726,16 +737,7 @@ class Player extends MovingCharacter {
         }
     }
 
-    collectGold() {
-        let tiles = this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32);
-        tiles.forEach(t => {
-            if(t.name === "gold") {
-                this.tileMap.replaceTileBlock(t.x * 32, t.y * 32);
-               
-                playCoin();
-            }
-        });
-    }
+    
 
     draw() {
         if(this.animation === null) {
@@ -829,7 +831,7 @@ class Player extends MovingCharacter {
             COLLECT: "collect"
         });
 
-        console.log(this.input);
+        
 
          switch(this.currentState) {
             // Climb
@@ -875,7 +877,8 @@ class Player extends MovingCharacter {
             // Collect
              case state.COLLECT:
                     
-                 this.collectGold();    
+                 this.collectGold();
+                  playCoin();    
                  this.tileMap.draw(bgCtx);
                 score+=250; // collect gold and increase the score by 250.
                 
@@ -955,7 +958,6 @@ class Player extends MovingCharacter {
             // Walk
              case state.WALK:
                 
-                console.log("walking");
                 this.velocityY = 0;
 
                 if(this.input === "ArrowLeft") {
@@ -967,8 +969,6 @@ class Player extends MovingCharacter {
                         this.resolveLeftWallCollision();
                     }
           
-                   
-                    
                     this.animation.setAnimationIndex(1); 
                 }
 
@@ -985,8 +985,7 @@ class Player extends MovingCharacter {
                 }
 
                  if(this.input === "") {
-                   
-                
+                        
                     this.currentState = "idle";
                 }
               
@@ -1061,25 +1060,14 @@ class NPC extends MovingCharacter {
         this.lastPlayerPosition = {x: 0, y: 0};
 
         this.playerRef = undefined;
+
+        this.direction = ""; // Will set the default state to idle.
+        this.targetX;
+        this.floor = this.y;
+       
+         
+       
     }
-
-    // moveUp() {  
-    //   // this.velocity = 320;
-    //     this.animation.setAnimationIndex(2);
-    //     this.animation.length = 2;
-
-    //       //  this.snapToLadder(this.x, this.y);
-        
-    //     if(!this.isHittingRoof() && !this.isAtLadderTop()) {
-    //         this.shiftPosition(0, -this.dy);
-    //     }
-        
-    //     if(this.isAtLadderTop()){
-    //         console.log("ladder at top");
-    //         this.ignoreGravity = true;
-    //         this.fallSpeed = 0;
-    //     }
-    // }
 
     /*
     checkCollision() {
@@ -1094,7 +1082,74 @@ class NPC extends MovingCharacter {
             this.y <= (npc.y + npc.height));  
     }
 
-    findJunctions() {
+    aiStep() {
+        let targetFloor = Math.floor(player.y / 96);
+         let nearestLadderX = this.findNearestLadderOnFloor();
+        let distanceToLadder = Math.abs(Math.round(this.x) - Math.round(nearestLadderX));
+
+        if (Math.abs(this.floor - targetFloor) > 1) {
+            
+          
+          
+            this.targetX = nearestLadderX;
+           
+            
+            
+
+            if(this.isClimbingLadder()) { // found a ladder.
+               
+                this.climbToward(targetFloor);
+              
+            }
+           
+                 
+        }
+        else {
+                this.targetX = player.x;
+        }
+       
+      if(distanceToLadder > 1) {
+         this.moveTowardTargetX();
+      }
+       
+    }
+    
+    climbToward(targetY) {
+       
+       let direction = Math.sign(targetY - this.floor);
+
+       // Will give the state engine a chance to set to idle before the next aiStep.
+       // It will immediately set to climb and snap pixel perfect to the ladder. 
+       // Then moveTowardTarget won't be called. It only operates when there is a distance to the ladder.
+       this.currentState = "idle"; 
+      
+       if(direction === -1) {
+        this.direction = "up";
+       }
+       else {
+        this.direction = "down";
+        
+       }
+       
+console.log("DIRECTION:", this.direction);
+    }
+
+    moveTowardTargetX() {
+        let direction = Math.sign(this.targetX - this.x);
+       
+        // Will move horizontally if there is a distance to the ladder.
+        if(direction === -1) {
+            this.direction = "left"
+        }
+        else  {
+            this.direction = "right";
+        }
+
+       
+    }
+     
+
+    findNearestLadderOnFloor() {
         let junctionsUp = [];
         let junctionsDown = [];
         let junctions = [];
@@ -1105,7 +1160,8 @@ class NPC extends MovingCharacter {
         let tileY = Math.floor(this.y / 32);
         let tileX = Math.floor(this.x / 32);
 
-        let tile = tileMap.blocks[tileY * tileMap.width + tileX];
+        // Include ladders at current position. Perhaps unnecessary.
+       /* let tile = tileMap.blocks[tileY * tileMap.width + tileX];
         let tileBelow = tileMap.blocks[(tileY + 1) * tileMap.width + tileX];
 
         if(tile.name === "ladder") {
@@ -1115,7 +1171,7 @@ class NPC extends MovingCharacter {
          else if(tileBelow.name === "ladder") {
             junctionsDown.push(tile);
         }
-       else {
+       else {*/
 
         while(n < tileMap.width) {
             tileY = Math.floor(this.y / 32);
@@ -1154,21 +1210,22 @@ class NPC extends MovingCharacter {
             n++;
         } 
 
-    }
 
         // Prioritize junctions up or down depending on where the player is.
-       if(this.playerRef.y < this.y) {
+       if(player.y < this.y) { // Player is global for now. Temporary fix because of a bug.
            junctions = junctionsUp.concat(junctionsDown);
            
        }
        else {
         junctions = junctionsDown.concat(junctionsUp);
        }
-       // console.log(junctions);
-        return junctions;
 
-    //return junctionsUp;
+        let nearestLadder = junctions.shift();
+        return nearestLadder.x;
     }
+    
+
+    
 
     draw() {   
          
@@ -1178,13 +1235,16 @@ class NPC extends MovingCharacter {
         }
         else {
             this.animation.animate(this.x, this.y);
-            this.animation.delay = 10;
+             // For easier bug fixing. Remove later.
+            c.font = "24px Arial";
+            c.fillStyle = "yellow";
+            c.fillText(this.currentState, this.x, this.y - 8);
         }
     }
 
      update(delta) {
         super.update();
-
+ 
          if (typeof this.animation.frame !== "number" || isNaN(this.animation.frame)) { this.animation.frame = 0; }
 
     this.animation.frame += this.velocity * delta * 0.03;
@@ -1193,69 +1253,7 @@ class NPC extends MovingCharacter {
         this.animation.frame = 0;
     }
  
-    
-
-    
-
-    if(this.playerRef.y !== this.y && this.playerRef.y !== this.lastPlayerPosition.y) {
-        this.junctions = this.findJunctions();
-       // console.log(this.junctions);
-        this.junctionPoint = this.junctions.shift();
-      //   console.log("found a junction point");
-    }
-
-        
-   
-         if(this.isAtLadderTop()) {
-                        
-                     //   console.log("now i am at the top");
-                        this.junctions = this.findJunctions();
-                        this.junctionPoint = this.junctions.shift();
-                    }
-
-        if(this.junctionPoint) {   
-            
-            if(Math.round(this.x) < this.junctionPoint.x) {
-              //  console.log("right");
-                this.moveRight();
-             //   console.log(this.x);
-
-                    this.enemies.forEach(enemy => {
-                    if(this.isCloseTo(enemy)) {
-                        
-                        this.x += Math.sign(this.x - enemy.x) * 1;
-                    
-                        //    this.y += Math.sign(this.y - enemy.y) * 0.5;
-                        
-                    
-                    }
-                });
-            }
-            else if(Math.round(this.x) > this.junctionPoint.x) {
-              //  console.log("left");
-                this.moveLeft();
-              //  console.log(this.x);
-
-                 this.enemies.forEach(enemy => {
-                    if(this.isCloseTo(enemy)) {
-                        
-                        this.x += Math.sign(this.x - enemy.x) * 0.5;
-                    
-                        //    this.y += Math.sign(this.y - enemy.y) * 0.5;
-                        
-                    
-                    }
-                });
-            }  
-             else if(Math.round(this.y) > this.playerRef.y) {
-               
-                    this.moveUp();
-                 //   console.log(this.y);
-                   
-               //    console.log("UP");
-                    this.ignoreGravity = true;
-                    this.fallSpeed = 0;
-
+    /*
                      this.enemies.forEach(enemy => {
                     if(this.isCloseTo(enemy)) {
                         
@@ -1265,32 +1263,204 @@ class NPC extends MovingCharacter {
                         
                     
                     }
-                });
+                });*/
                    
-                }
-                else if(Math.round(this.y) < this.playerRef.y) {
-                  
-               
-                    this.moveDown();
-                           
-                  //  console.log("DOWN");
+        const state = Object.freeze({
+            CLIMB: "climb",
+            FALL: "fall",
+            SWING: "swing",
+            IDLE: "idle",
+            WALK: "walk",
+            COLLECT: "collect"
+        });
 
-                     this.enemies.forEach(enemy => {
-                    if(this.isCloseTo(enemy)) {
-                        
-                      //  this.x += Math.sign(this.x - enemy.x) * 1;
-                    
-                            this.y += Math.sign(this.y - enemy.y) * 0.5;
-                        
-                    
+        switch(this.currentState) {
+            // Climb
+            case state.CLIMB:
+                console.log("climb............");
+                this.velocityX = 0; this.velocityY = 50 * delta;
+
+                this.animation.setAnimationIndex(2);
+                this.animation.length = 1;
+
+                if(this.direction === "up") {
+                    this.snapToLadder(this.x, this.y);
+
+                    if(!this.isHittingRoof() && !this.isAtLadderTop()) {
+                        this.shiftPosition(this.velocityX, -this.velocityY);
+                        this.resolveLadderTop();
                     }
-                });
-                                   
-            }
-  
+
+                    this.animation.length = 2;
+                }
+              
+                 if(this.direction === "down") {
+                    this.snapToLadder(this.x, this.y);
+                    this.shiftPosition(this.velocityX, this.velocityY);
+                    this.resolveFloorCollision();
+
+                     if(!this.isClimbingLadder()) {
+                        this.currentState = "fall";
+                    }
+
+                    this.animation.length = 2;
+                }
+
+                if(this.direction === "left") {
+                    this.currentState = "walk";
+                }
+
+                 if(this.direction=== "right") {
+                    this.currentState = "walk";
+                }
+
+                 if(this.isAtLadderTop()) {
+                   this.resolveLadderTop();
+                    this.currentState = "idle"; // Set to idle when reaching the top of the ladder.
+                    
+                }
+                break;
+            // Collect
+             case state.COLLECT:
+                    
+                 this.collectGold();    
+                 this.tileMap.draw(bgCtx);
+                          
+                this.currentState = "fall";
+                break;
+            // Fall
+             case state.FALL:    
+                 console.log("state=FALL");
+                 this.animation.setAnimationIndex(3);
+                 this.animation.length = 1;
+
+                 this.velocityX = 0; this.velocityY = this.fallSpeed * delta;
+                
+                this.shiftPosition(this.velocityX, this.velocityY);
+
+                if(this.isHittingFloor()) {
+                        this.resolveFloorCollision();
+                        this.currentState = "idle";
+                    }
+     
+               if(this.isClimbingLadder()) {
+                   this.currentState = "climb";
+               }
+               
+               if(this.isCollectingGold()) {
+                    this.currentState = "collect";
+               }
+
+               if(this.isRopeSwinging()) {
+                    this.currentState = "swing";
+               }
+                break;
+            // Swing
+            case state.SWING:
+               
+                this.animation.setAnimationIndex(4);
+                this.animation.length = 1;
+                this.velocityX = this.velocity * delta; this.velocityY = 0;
+
+                if(this.direction === "left") {
+                    this.shiftPosition(-this.velocityX, this.velocityY);
+                    this.animation.length = 3;
+                }
+
+                if(this.direction === "right") {
+                    this.shiftPosition(this.velocityX, this.velocityY);
+                    this.animation.length = 3;
+                }
+
+                 if(this.direction === "down") {
+                    this.currentState = "fall";
+                }
+                
+                if(this.isClimbingLadder()) {
+                    this.currentState = "climb";
+                }
+
+                if(!this.isRopeSwinging()) {
+                    this.currentState = "fall";
+                }
+                break;
+            // Walk
+             case state.WALK:
+                
+                this.velocityY = 0;
+
+                if(this.direction === "left") {
+                         
+                    this.velocityX = -this.velocity * delta; 
+                   
+                    if(this.x > 0 && !this.isHittingLeftWall()) {
+                        this.shiftPosition(this.velocityX, this.velocityY);
+                        this.resolveLeftWallCollision();
+                    }
+          
+                    this.animation.setAnimationIndex(1); 
+                }
+
+               if(this.direction === "right") {
+                     
+                    this.velocityX = this.velocity * delta;
+                    
+                    if(this.x < 800 && !this.isHittingRightWall()) {
+                        this.shiftPosition(this.velocityX, this.velocityY);  
+                        this.resolveRightWallCollision();     
+                    }
+
+                     this.animation.setAnimationIndex(0); 
+                }
+
+                // Since this is done programmatically something other than keyboard must set to idle.
+                 if(this.direction === "" || this.isClimbingLadder()) {
+                         
+                    this.currentState = "idle";
+                }
+
+                // animation    
+                this.animation.length = 3;
+
+               if(this.isFreefalling()) {
+                this.currentState = "fall";
+               }
+                // on key up or velocity 0 return to idle.
+                
+                if(this.isCollectingGold()) {
+                    this.currentState = "collect";
+                }
+
+                if(this.isRopeSwinging()) {
+                    this.currentState = "swing";
+                }
+                break; 
+            // Idle
+            case state.IDLE:
+                this.aiStep(); // Let AI decide what to do next. 
+                console.log("IDLE");
+               this.animation.length = 1;
+
+                this.velocityX = 0;
+                this.velocityY = 0;
+
+                // Idle next to a ladder.
+                if(this.isClimbingLadder()) {
+                   this.currentState = "climb"; // Will not climb until up or down is pressed.
+                   //this.snapToLadder();
+                  // alert("climb");
+                }
+
+                if(this.direction === "left" || this.direction === "right") {       
+                    this.currentState = "walk";   
+                  //  alert("walk");
+                }
+
+                break;
+            
         }
         
-
+/*
          switch(true) {
             case this.playerAction.climb:
                 DEBUG && console.log("enemy CLIMB");
@@ -1343,7 +1513,7 @@ class NPC extends MovingCharacter {
                
                 break;        
         }
-
+*/
        this.lastPlayerPosition.x = this.playerRef.x;
         this.lastPlayerPosition.y = this.playerRef.y;
 
@@ -1382,7 +1552,7 @@ async function buildBackground() {
 }
 
 // TODO: Global variabel orsakar problem när den anropas i klasser.
-const player = new Player(40,480, tileMap, {x: 300, y: 200});
+const player = new Player(64,224, tileMap, {x: 300, y: 200});
 const npc1 = new NPC(680,480, tileMap);
 const npc2 = new NPC(730,480, tileMap);
 const npc3 = new NPC(700,480, tileMap);
@@ -1435,8 +1605,8 @@ function animate(time) {
     player.update(delta);
 
      npc1.update(delta);
-     npc2.update(delta);
-     npc3.update(delta);
+    // npc2.update(delta);
+    // npc3.update(delta);
 
       
     //}
