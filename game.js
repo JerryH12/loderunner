@@ -855,8 +855,11 @@ class Player extends MovingCharacter {
               
                  if(this.input === "ArrowDown") {
                     this.snapToLadder(this.x, this.y);
-                    this.shiftPosition(this.velocityX, this.velocityY);
-                    this.resolveFloorCollision();
+
+                  
+                        this.shiftPosition(this.velocityX, this.velocityY);
+                        this.resolveFloorCollision();
+                    
 
                      if(!this.isClimbingLadder()) {
                         this.currentState = "fall";
@@ -1053,7 +1056,7 @@ class NPC extends MovingCharacter {
         this.carryGold = false;
         this.enemies = [];
         this.animationIndex = 1;
-        this.velocity = 100;
+        this.velocity = 150;
 
         this.junctions = [];
         this.junctionPoint = null;
@@ -1061,12 +1064,9 @@ class NPC extends MovingCharacter {
 
         this.playerRef = undefined;
 
-        this.direction = ""; // Will set the default state to idle.
+        this.direction = "";
         this.targetX;
-        this.floor = this.y;
-       
-         
-       
+        this.floor = Math.floor(this.y/96);   
     }
 
     /*
@@ -1083,55 +1083,44 @@ class NPC extends MovingCharacter {
     }
 
     aiStep() {
+         this.floor = Math.floor(this.y/96);
         let targetFloor = Math.floor(player.y / 96);
          let nearestLadderX = this.findNearestLadderOnFloor();
-        let distanceToLadder = Math.abs(Math.round(this.x) - Math.round(nearestLadderX));
-
+       // let distanceToTarget = Math.abs(Math.round(this.x) - Math.round(nearestLadderX));
+       
         if (Math.abs(this.floor - targetFloor) > 1) {
             
-          
-          
             this.targetX = nearestLadderX;
            
-            
-            
-
             if(this.isClimbingLadder()) { // found a ladder.
                
-                this.climbToward(targetFloor);
-              
-            }
-           
-                 
+                this.climbToward(targetFloor);  
+            }              
         }
         else {
-                this.targetX = player.x;
+                this.targetX = player.x; 
+               
+               // alert("targetX = player.x");           
         }
        
-      if(distanceToLadder > 1) {
+    let distanceToTarget = Math.abs(Math.floor(this.x) - Math.floor(this.targetX));
+
+      if(distanceToTarget > 4) {
          this.moveTowardTargetX();
       }
-       
+  
     }
     
     climbToward(targetY) {
-       
-       let direction = Math.sign(targetY - this.floor);
-
-       // Will give the state engine a chance to set to idle before the next aiStep.
-       // It will immediately set to climb and snap pixel perfect to the ladder. 
-       // Then moveTowardTarget won't be called. It only operates when there is a distance to the ladder.
-       this.currentState = "idle"; 
-      
-       if(direction === -1) {
-        this.direction = "up";
-       }
-       else {
-        this.direction = "down";
         
-       }
+       let directionSign = Math.sign(targetY - Math.floor(this.y/96));
        
-console.log("DIRECTION:", this.direction);
+      if(directionSign !== 0) {
+            this.currentState = "idle"; 
+            this.direction = directionSign === -1 ? "up" : "down";         
+        }
+
+        console.log("DIRECTION", this.direction);
     }
 
     moveTowardTargetX() {
@@ -1141,7 +1130,8 @@ console.log("DIRECTION:", this.direction);
         if(direction === -1) {
             this.direction = "left"
         }
-        else  {
+        
+        if(direction === 1) {
             this.direction = "right";
         }
 
@@ -1150,6 +1140,7 @@ console.log("DIRECTION:", this.direction);
      
 
     findNearestLadderOnFloor() {
+       
         let junctionsUp = [];
         let junctionsDown = [];
         let junctions = [];
@@ -1212,7 +1203,7 @@ console.log("DIRECTION:", this.direction);
 
 
         // Prioritize junctions up or down depending on where the player is.
-       if(player.y < this.y) { // Player is global for now. Temporary fix because of a bug.
+       if(Math.floor(player.y/96) < this.floor) { // Player is global for now. Temporary fix because of a bug.
            junctions = junctionsUp.concat(junctionsDown);
            
        }
@@ -1221,6 +1212,12 @@ console.log("DIRECTION:", this.direction);
        }
 
         let nearestLadder = junctions.shift();
+        console.log(nearestLadder);
+        if(!nearestLadder) {
+            return 0;
+        }
+
+        
         return nearestLadder.x;
     }
     
@@ -1271,14 +1268,15 @@ console.log("DIRECTION:", this.direction);
             SWING: "swing",
             IDLE: "idle",
             WALK: "walk",
-            COLLECT: "collect"
+            COLLECT: "collect",
+            DECIDE: "decide"
         });
 
         switch(this.currentState) {
             // Climb
             case state.CLIMB:
                 console.log("climb............");
-                this.velocityX = 0; this.velocityY = 50 * delta;
+                this.velocityX = 0; this.velocityY = 80 * delta;
 
                 this.animation.setAnimationIndex(2);
                 this.animation.length = 1;
@@ -1319,6 +1317,12 @@ console.log("DIRECTION:", this.direction);
                     this.currentState = "idle"; // Set to idle when reaching the top of the ladder.
                     
                 }
+
+                if(this.isHittingFloor()) {
+                    this.resolveFloorCollision();
+                    this.currentState = "idle";
+                }
+                
                 break;
             // Collect
              case state.COLLECT:
@@ -1375,10 +1379,12 @@ console.log("DIRECTION:", this.direction);
                  if(this.direction === "down") {
                     this.currentState = "fall";
                 }
-                
+               
+                /*
                 if(this.isClimbingLadder()) {
-                    this.currentState = "climb";
-                }
+                    this.currentState = "idle";
+                    this.direction = "";
+                }*/
 
                 if(!this.isRopeSwinging()) {
                     this.currentState = "fall";
@@ -1437,7 +1443,7 @@ console.log("DIRECTION:", this.direction);
                 break; 
             // Idle
             case state.IDLE:
-                this.aiStep(); // Let AI decide what to do next. 
+               this.aiStep(); // Let AI decide what to do next. 
                 console.log("IDLE");
                this.animation.length = 1;
 
@@ -1445,18 +1451,22 @@ console.log("DIRECTION:", this.direction);
                 this.velocityY = 0;
 
                 // Idle next to a ladder.
-                if(this.isClimbingLadder()) {
+                if(this.direction === "up" || this.direction === "down") {
                    this.currentState = "climb"; // Will not climb until up or down is pressed.
                    //this.snapToLadder();
                   // alert("climb");
                 }
-
-                if(this.direction === "left" || this.direction === "right") {       
+                else if(this.direction === "left" || this.direction === "right") {       
                     this.currentState = "walk";   
-                  //  alert("walk");
                 }
 
                 break;
+
+                // decide
+                case state.DECIDE:
+                     
+                      this.currentState = "idle";
+                    break;
             
         }
         
@@ -1605,8 +1615,8 @@ function animate(time) {
     player.update(delta);
 
      npc1.update(delta);
-    // npc2.update(delta);
-    // npc3.update(delta);
+   //  npc2.update(delta);
+   //  npc3.update(delta);
 
       
     //}
