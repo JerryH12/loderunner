@@ -58,7 +58,7 @@ bgCtx.fillStyle = 'blue';
 
  //let tileMap = await fetchCSV();
 
-const textString = await fetch("http://127.0.0.1:5500/levels/level1.CSV").then(r => r.text())
+const textString = await fetch("http://127.0.0.1:5500/levels/level2.CSV").then(r => r.text())
 
 
  let rawMap = textString.split(",").map(m => m.trim());
@@ -115,10 +115,20 @@ const collider = {
     enemies: [],
     player: null,
     checkCollision: function() { 
-        const isCollided = this.enemies.some((enemy)=> player.isCollidingWith(enemy));
-        player.setCollisionState(isCollided);
-    }, 
-};
+        //const isCollided = this.enemies.some((enemy)=> player.isCollidingWith(enemy));
+        this.enemies.forEach(enemy => {
+            if(player.isCollidingWith(enemy)) {
+                if(player.y < enemy.y) {  
+                    player.y = Math.floor(enemy.y) - 33;       
+                }
+            else {
+                player.setCollisionState(true);
+                }
+            } // end of if
+        
+        });
+    }
+}; // end of collider
 
 class Animation {
     constructor(sprites) {
@@ -201,6 +211,13 @@ class TileMap {
         DEBUG && console.log("x:",x);
         DEBUG && console.log("y:",y);
         return block;
+    }
+
+    renameTileBlock(x_coord, y_coord, name) {
+         let x = parseInt(x_coord / 32);
+        let y = parseInt(y_coord / 32);
+
+        this.blocks[y*this.width+x].name = name;
     }
 
     replaceTileBlock(x_coord, y_coord) {
@@ -296,15 +313,15 @@ class TileMap {
     }
 
     setCollisionState(collisionState) {
+      // if(player.y + player.height < 
         collisionState && lives--;
     }
 
     isCollidingWith(other) {
-      
         return(
-            (this.x + this.width) >= (other.x + other.x_offs) && 
+            (this.x + this.width) >= (other.x) && 
             this.x <= (other.x + other.width) && 
-            (this.y + this.height) >= (other.y  + other.y_offs) &&
+            (this.y + this.height) >= (other.y) &&
             this.y <= (other.y + other.height));
      }
   }
@@ -425,6 +442,14 @@ class MovingCharacter extends Entity {
         return tiles.some(t => t.name === "gold" && Math.abs(t.x * 32 - this.x) < 8);
     }
     
+    isTrapped() {
+        let tiles = this.tileMap.getOverlappingTiles(this.x-1, this.y, 96, 31);
+      
+      //  tiles.forEach(t=> console.log(t));
+       
+        return ( tiles[0].name === "wall" && tiles[1].name === "wall");  
+    }
+
     isHittingLeftWall() {
         // const neighborLeftUp =  this.tileMap.getTileBlock(this.x-32, this.y);
         // const neighborLeftDown = this.tileMap.getTileBlock(this.x-32, this.y+31);
@@ -446,7 +471,7 @@ class MovingCharacter extends Entity {
         // const neighborRightUp =  this.tileMap.getTileBlock(this.x+32, this.y);
         // const neighborRightDown = this.tileMap.getTileBlock(this.x+32, this.y+31);
 
-        const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
+        const hitboxX = this.x + (32 - this.hitboxWidth) / 2; // 6 pixels less wide than actual size.
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
          let tiles = this.tileMap.getOverlappingTiles(hitboxX+1, hitboxY, this.hitboxWidth, this.hitboxHeight);
@@ -546,7 +571,7 @@ class MovingCharacter extends Entity {
         
         //let tiles = this.tileMap.getOverlappingTiles(this.x, this.y+1, 32, 32); 
         let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight); 
-        return tiles.some(t => t.name === "wall"); 
+        return tiles.some(t => t.name === "wall" || t.name === "border" || t.name === "solid"); 
     }
 
     isHittingRoof() {
@@ -725,7 +750,7 @@ class Player extends MovingCharacter {
 
     digHoleLeft() {
         if(this.isHittingFloor()) {
-            tileMap.replaceTileBlock(this.x-31, this.y+32);
+            tileMap.replaceTileBlock(this.x-1, this.y+32);
              this.tileMap.draw(bgCtx);
         }
     }
@@ -836,7 +861,7 @@ class Player extends MovingCharacter {
          switch(this.currentState) {
             // Climb
             case state.CLIMB:
-                console.log("climb............");
+               // console.log("climb............");
                 this.velocityX = 0; this.velocityY = 150 * delta;
 
                 this.animation.setAnimationIndex(2);
@@ -1066,7 +1091,7 @@ class NPC extends MovingCharacter {
 
         this.direction = "";
         this.targetX;
-        this.floor = Math.floor(this.y/96);   
+        this.floor;   
     }
 
     /*
@@ -1088,6 +1113,8 @@ class NPC extends MovingCharacter {
          let nearestLadderX = this.findNearestLadderOnFloor();
        // let distanceToTarget = Math.abs(Math.round(this.x) - Math.round(nearestLadderX));
        
+       
+
         if (Math.abs(this.floor - targetFloor) > 1) {
             
             this.targetX = nearestLadderX;
@@ -1095,20 +1122,22 @@ class NPC extends MovingCharacter {
             if(this.isClimbingLadder()) { // found a ladder.
                
                 this.climbToward(targetFloor);  
-            }              
+            } 
+
+           
         }
         else {
-                this.targetX = player.x; 
-               
-               // alert("targetX = player.x");           
+                this.targetX = player.x;          
         }
        
-    let distanceToTarget = Math.abs(Math.floor(this.x) - Math.floor(this.targetX));
+        let distanceToTarget = Math.abs(Math.floor(this.x) - Math.floor(this.targetX));
 
-      if(distanceToTarget > 4) {
+        if(distanceToTarget > 4) {
          this.moveTowardTargetX();
-      }
-  
+        }
+
+       
+
     }
     
     climbToward(targetY) {
@@ -1138,6 +1167,32 @@ class NPC extends MovingCharacter {
        
     }
      
+
+    findNearestLadder() {
+        let n = 0;
+        let directionX = Math.sign(player.x - this.x);
+        let offsetY = player.y > this.y ? 1 : 0;
+        let tile = undefined;
+        let tileY = Math.floor(this.y / 32);
+        let tileX = Math.floor(this.x / 32);
+
+        // Scan left or right.
+        while(n < tileMap.width) {
+           
+            tile = tileMap.blocks[(tileY + offsetY) * tileMap.width + tileX + directionX * n];
+            
+            if(tile.name === "ladder") {
+                //alert(tile.x);
+                return tile.x;
+            }
+
+            if(tile.name === "wall") {
+                break;
+            }
+            n++;
+        }
+        return this.x;
+    }
 
     findNearestLadderOnFloor() {
        
@@ -1211,14 +1266,12 @@ class NPC extends MovingCharacter {
         junctions = junctionsDown.concat(junctionsUp);
        }
 
-        let nearestLadder = junctions.shift();
-        console.log(nearestLadder);
-        if(!nearestLadder) {
-            return 0;
-        }
+       if(junctions.length === 0) {
+        return this.x;
+       }
 
-        
-        return nearestLadder.x;
+      // junctions.sort((a, b) => Math.abs(a.x - player.x) - Math.abs(b.x - player.x));
+       return junctions[0].x;
     }
     
 
@@ -1261,7 +1314,7 @@ class NPC extends MovingCharacter {
                     
                     }
                 });*/
-                   
+                
         const state = Object.freeze({
             CLIMB: "climb",
             FALL: "fall",
@@ -1269,7 +1322,8 @@ class NPC extends MovingCharacter {
             IDLE: "idle",
             WALK: "walk",
             COLLECT: "collect",
-            DECIDE: "decide"
+            DECIDE: "decide",
+            TRAPPED: "trapped"
         });
 
         switch(this.currentState) {
@@ -1332,6 +1386,11 @@ class NPC extends MovingCharacter {
                           
                 this.currentState = "fall";
                 break;
+            // Trapped
+            case state.TRAPPED:
+                  tileMap.renameTileBlock(this.x+31 , this.y, "wall");
+                          //   tileMap.draw(bgCtx);
+                break;
             // Fall
              case state.FALL:    
                  console.log("state=FALL");
@@ -1340,11 +1399,20 @@ class NPC extends MovingCharacter {
 
                  this.velocityX = 0; this.velocityY = this.fallSpeed * delta;
                 
-                this.shiftPosition(this.velocityX, this.velocityY);
+                // if(this.y < 512) {
+                    this.shiftPosition(this.velocityX, this.velocityY);
+                // }
 
                 if(this.isHittingFloor()) {
                         this.resolveFloorCollision();
-                        this.currentState = "idle";
+
+                            if(this.isTrapped()) {
+                               
+                               this.currentState = "trapped";
+                         }
+                         else {
+                            this.currentState = "idle";
+                        }
                     }
      
                if(this.isClimbingLadder()) {
@@ -1358,10 +1426,11 @@ class NPC extends MovingCharacter {
                if(this.isRopeSwinging()) {
                     this.currentState = "swing";
                }
+
                 break;
             // Swing
             case state.SWING:
-               
+              
                 this.animation.setAnimationIndex(4);
                 this.animation.length = 1;
                 this.velocityX = this.velocity * delta; this.velocityY = 0;
@@ -1390,6 +1459,7 @@ class NPC extends MovingCharacter {
                     this.currentState = "fall";
                 }
                 break;
+           
             // Walk
              case state.WALK:
                 
@@ -1443,7 +1513,7 @@ class NPC extends MovingCharacter {
                 break; 
             // Idle
             case state.IDLE:
-               this.aiStep(); // Let AI decide what to do next. 
+              this.aiStep();
                 console.log("IDLE");
                this.animation.length = 1;
 
@@ -1453,12 +1523,14 @@ class NPC extends MovingCharacter {
                 // Idle next to a ladder.
                 if(this.direction === "up" || this.direction === "down") {
                    this.currentState = "climb"; // Will not climb until up or down is pressed.
+                   
                    //this.snapToLadder();
                   // alert("climb");
                 }
                 else if(this.direction === "left" || this.direction === "right") {       
                     this.currentState = "walk";   
                 }
+
 
                 break;
 
@@ -1470,62 +1542,12 @@ class NPC extends MovingCharacter {
             
         }
         
-/*
-         switch(true) {
-            case this.playerAction.climb:
-                DEBUG && console.log("enemy CLIMB");
-             // console.log("CLIMB");
-                this.dx = 1;//this.velocity * delta; 
-                 this.dy = 1;//this.velocity * delta;
-                break;
-             case this.playerAction.collect:
-                DEBUG && console.log("COLLECT");
-                
-                 // TODO: NPC doesn't have this function. Different behavior than player.
-                 //this.collectGold();  
-                  
-                 //this.tileMap.draw(bgCtx);
-                //score+=250; // collect gold and increase score by 250.
-                
-                break;
-             case this.playerAction.dig:
-                //
-                break;
-             case this.playerAction.fall:
-               
-                 DEBUG && console.log("FALL");
-                 this.animation.setAnimationIndex(3);
-                 this.animation.length = 1;
-                 
-                this.dx = 0; this.dy = 0; // disable user control while falling.
-                //this.shiftPosition(0, this.fallSpeed * delta);
-                this.shiftPosition(0,1);
-                if(this.isHittingFloor) {
-                  //  this.resolveFloorCollision();
-                }
-                
-                this.resolveLadderTop();
+       /* if(this.isRopeSwinging()) {
+          this.aiStep();
+        } */
 
-                break;
-            case this.playerAction.swing:
-                DEBUG && console.log("SWING");
-                this.animation.setAnimationIndex(4);
-                
-                this.dx = this.velocity * delta; this.dy = this.velocity * delta;
-                break;
-             default:
-                 DEBUG && console.log("NORMAL");
-                  
-                 //this.dx = this.velocity * delta; this.dy = 0;
-              
-                 this.dx = 1;
-                 
-               
-                break;        
-        }
-*/
-       this.lastPlayerPosition.x = this.playerRef.x;
-        this.lastPlayerPosition.y = this.playerRef.y;
+      /* this.lastPlayerPosition.x = this.playerRef.x;
+        this.lastPlayerPosition.y = this.playerRef.y;*/
 
          if(this.ignoreGravity) {
                     this.ignoreGravity = false;
@@ -1615,7 +1637,7 @@ function animate(time) {
     player.update(delta);
 
      npc1.update(delta);
-   //  npc2.update(delta);
+    // npc2.update(delta);
    //  npc3.update(delta);
 
       
