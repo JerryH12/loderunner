@@ -199,13 +199,9 @@ class TileMap {
     }
 
      getTileBlock(x_coord, y_coord) {
-        // A function to see what tile block we hit and choose action.
-        // Investigate the surrounding area and check collisions. 
-        // If a wall is hit don't move. If gold increase score.
-        // Walls have tr, tl, br, bl set to 1.
 
-        let x = parseInt(x_coord / 32);
-        let y = parseInt(y_coord / 32);
+        let x = Math.floor((x_coord + 16) / 32);
+        let y = Math.floor((y_coord + 16) / 32);
 
         let block = this.blocks[y*this.width+x];
         DEBUG && console.log("x:",x);
@@ -218,6 +214,17 @@ class TileMap {
         let y = parseInt(y_coord / 32);
 
         this.blocks[y*this.width+x].name = name;
+    }
+
+    replaceTile(x_coord, y_coord, index, name) {
+        let centerX = x_coord + 16;
+        let centerY = y_coord + 16;
+
+        let indexY = Math.floor(centerY / 32);
+        let indexX = Math.floor(centerX / 32);
+                            
+        let newBlock = new TileBlock(indexX * 32, indexY * 32, index, name);
+        tileMap.blocks[indexY * tileMap.width + indexX] = newBlock;
     }
 
     replaceTileBlock(x_coord, y_coord) {
@@ -1397,6 +1404,10 @@ class NPC extends MovingCharacter {
 
                 this.animation.setAnimationIndex(3);
                 this.animation.length = 1;
+
+                if(this.direction === "up") {
+                    this.currentState = "idle";
+                }
                 break;
             // Fall
              case state.FALL:    
@@ -1413,29 +1424,31 @@ class NPC extends MovingCharacter {
                        
                         if(this.isTrapped()) {
             
-                            let centerX = this.x + 16;
-                            let centerY = this.y + 16;
-                            let indexY = Math.floor(centerY / 32);
-                            let indexX = Math.floor(centerX / 32);
-                            
-                             let solidBlock = new TileBlock(indexX * 32, indexY * 32, 10, "wall");
-                            tileMap.blocks[indexY * tileMap.width + indexX] = solidBlock;
-                            console.log(indexX, indexY);
+                            tileMap.replaceTile(this.x, this.y, 10, "wall");
 
-                            let tileIndex = (indexY - 1) * tileMap.width + indexX;
-                            //(Math.floor(this.y / 32) - 1) * tileMap.width + Math.floor(this.x / 32) + 1;
-
-                            let x = tileMap.blocks[tileIndex].x;
-                            let y = tileMap.blocks[tileIndex].y;
-                            let block = new TileBlock(x, y, 7, "gold");
-
-                            tileMap.blocks[tileIndex] = block;
-
-                            this.hasGold = false;
+                            if(this.hasGold) {
+                             
+                                tileMap.replaceTile(this.x, this.y - 32, 7, "gold");
+                                this.hasGold = false;
+                            }
                             tileMap.draw(bgCtx);
-                                    
-                           
-                            this.currentState = "trapped";
+                                
+                           setTimeout(() => {
+                        
+                               let tileBlock = tileMap.getTileBlock(this.x, this.y);
+                               tileBlock.index = 1; 
+                               this.y -= 33;
+                             
+                                tileMap.draw(bgCtx);
+                               //this.x = capturedBlock.x;
+                                this.direction = "up";
+
+                                // 
+                              
+                               
+                           }, 5000);
+
+                             this.currentState = "trapped";
                         }
                         else {
                         this.currentState = "idle";
