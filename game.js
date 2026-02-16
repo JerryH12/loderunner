@@ -1078,7 +1078,7 @@ class NPC extends MovingCharacter {
         super(x, y, tilemap);
        
         this.direction = "right";
-        this.carryGold = false;
+    
         this.enemies = [];
         this.animationIndex = 1;
         this.velocity = 150;
@@ -1091,7 +1091,9 @@ class NPC extends MovingCharacter {
 
         this.direction = "";
         this.targetX;
-        this.floor;   
+        this.floor;
+        
+        this.hasGold = false;
     }
 
     /*
@@ -1381,15 +1383,20 @@ class NPC extends MovingCharacter {
             // Collect
              case state.COLLECT:
                     
-                 this.collectGold();    
-                 this.tileMap.draw(bgCtx);
-                          
-                this.currentState = "fall";
+             
+                this.collectGold();
+                this.hasGold = true;
+                this.tileMap.draw(bgCtx);  
+             
+                
+                              
+                this.currentState = "idle";
                 break;
             // Trapped
             case state.TRAPPED:
-                  tileMap.renameTileBlock(this.x+31 , this.y, "wall");
-                          //   tileMap.draw(bgCtx);
+
+                this.animation.setAnimationIndex(3);
+                this.animation.length = 1;
                 break;
             // Fall
              case state.FALL:    
@@ -1398,28 +1405,48 @@ class NPC extends MovingCharacter {
                  this.animation.length = 1;
 
                  this.velocityX = 0; this.velocityY = this.fallSpeed * delta;
+                          
+                this.shiftPosition(this.velocityX, this.velocityY);
                 
-                // if(this.y < 512) {
-                    this.shiftPosition(this.velocityX, this.velocityY);
-                // }
-
                 if(this.isHittingFloor()) {
                         this.resolveFloorCollision();
+                       
+                        if(this.isTrapped()) {
+            
+                            let centerX = this.x + 16;
+                            let centerY = this.y + 16;
+                            let indexY = Math.floor(centerY / 32);
+                            let indexX = Math.floor(centerX / 32);
+                            
+                             let solidBlock = new TileBlock(indexX * 32, indexY * 32, 10, "wall");
+                            tileMap.blocks[indexY * tileMap.width + indexX] = solidBlock;
+                            console.log(indexX, indexY);
 
-                            if(this.isTrapped()) {
-                               
-                               this.currentState = "trapped";
-                         }
-                         else {
-                            this.currentState = "idle";
+                            let tileIndex = (indexY - 1) * tileMap.width + indexX;
+                            //(Math.floor(this.y / 32) - 1) * tileMap.width + Math.floor(this.x / 32) + 1;
+
+                            let x = tileMap.blocks[tileIndex].x;
+                            let y = tileMap.blocks[tileIndex].y;
+                            let block = new TileBlock(x, y, 7, "gold");
+
+                            tileMap.blocks[tileIndex] = block;
+
+                            this.hasGold = false;
+                            tileMap.draw(bgCtx);
+                                    
+                           
+                            this.currentState = "trapped";
                         }
+                        else {
+                        this.currentState = "idle";
                     }
+                }
      
                if(this.isClimbingLadder()) {
                    this.currentState = "climb";
                }
                
-               if(this.isCollectingGold()) {
+               if(this.isCollectingGold() && !this.hasGold) {
                     this.currentState = "collect";
                }
 
@@ -1503,7 +1530,7 @@ class NPC extends MovingCharacter {
                }
                 // on key up or velocity 0 return to idle.
                 
-                if(this.isCollectingGold()) {
+                if(this.isCollectingGold() && !this.hasGold) {
                     this.currentState = "collect";
                 }
 
