@@ -58,7 +58,7 @@ bgCtx.fillStyle = 'blue';
 
  //let tileMap = await fetchCSV();
 
-const textString = await fetch("http://127.0.0.1:5500/levels/level2.CSV").then(r => r.text())
+const textString = await fetch("http://127.0.0.1:5500/levels/level7.CSV").then(r => r.text())
 
 
  let rawMap = textString.split(",").map(m => m.trim());
@@ -164,7 +164,7 @@ class TileMap {
        
         this.blocks = this.createBlocksFromMap(mapData);
         this.data = [];
-        this.width = 26;
+        this.width = 28; // Width in blocks.
         this.height = 21;
         this.images = null;
     }
@@ -186,7 +186,7 @@ class TileMap {
             blocks.push(tileBlock);
             //this.data.push(index);
 
-            if(xc < 25) {
+            if(xc < 27) {
                 xc++;
             }
             else {
@@ -387,7 +387,7 @@ class MovingCharacter extends Entity {
         this.animation.setAnimationIndex(0);
         this.animation.length = 3;    
        
-        if(!this.isHittingRightWall() && this.x < 800) {  
+        if(!this.isHittingRightWall() && this.x < 864) {  
             this.shiftPosition(this.dx, 0);
         }    
         
@@ -1011,7 +1011,7 @@ class Player extends MovingCharacter {
                      
                     this.velocityX = this.velocity * delta;
                     
-                    if(this.x < 800 && !this.isHittingRightWall()) {
+                    if(this.x < 864 && !this.isHittingRightWall()) {
                         this.shiftPosition(this.velocityX, this.velocityY);  
                         this.resolveRightWallCollision();     
                     }
@@ -1071,6 +1071,9 @@ class Player extends MovingCharacter {
                     this.currentState = "dig";
                 }
 
+                if(this.isFreefalling()) {
+                    this.currentState = "fall";
+                }
                 break;
             
         }
@@ -1521,7 +1524,7 @@ class NPC extends MovingCharacter {
                      
                     this.velocityX = this.velocity * delta;
                     
-                    if(this.x < 800 && !this.isHittingRightWall()) {
+                    if(this.x < 864 && !this.isHittingRightWall()) {
                         this.shiftPosition(this.velocityX, this.velocityY);  
                         this.resolveRightWallCollision();     
                     }
@@ -1677,8 +1680,8 @@ function animate(time) {
     player.update(delta);
 
      npc1.update(delta);
-    // npc2.update(delta);
-   //  npc3.update(delta);
+     npc2.update(delta);
+     npc3.update(delta);
 
       
     //}
