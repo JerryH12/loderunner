@@ -223,8 +223,10 @@ class TileMap {
         let indexY = Math.floor(centerY / 32);
         let indexX = Math.floor(centerX / 32);
                             
-        let newBlock = new TileBlock(indexX * 32, indexY * 32, index, name);
-        tileMap.blocks[indexY * tileMap.width + indexX] = newBlock;
+        //let newBlock = new TileBlock(indexX * 32, indexY * 32, index, name);
+        //tileMap.blocks[indexY * tileMap.width + indexX] = newBlock;
+        tileMap.blocks[indexY * tileMap.width + indexX].index = index;
+        tileMap.blocks[indexY * tileMap.width + indexX].name = name;
     }
 
     replaceTileBlock(x_coord, y_coord) {
@@ -235,6 +237,23 @@ class TileMap {
         let oldBlock = this.blocks[y*this.width+x];
         let newBlock = new TileBlock(oldBlock.x, oldBlock.y, 0, "empty", 0, 0);
         this.blocks[y*this.width+x] = newBlock;
+    }
+
+    restoreWall(x_coord, y_coord) {
+        setTimeout(() => {
+
+        let centerX = x_coord + 16;
+        let centerY = y_coord + 16;
+
+        let indexY = Math.floor(centerY / 32);
+        let indexX = Math.floor(centerX / 32);
+
+        this.blocks[indexY * this.width + indexX].index = 1;
+        this.blocks[indexY * this.width + indexX].name = "wall";
+          
+            this.draw(bgCtx);
+          
+        }, 8500);
     }
 
     setOffLimits(x_coord, y_coord) {
@@ -699,20 +718,8 @@ class TileBlock extends Entity {
 
     constructor(x, y, index, name = "", x_offs, y_offs) {
         super(x, y, x_offs, y_offs);
-        //this.image = new Image();
-
-        // edited 17/1
-        //this.image.src = `graphics/${value}.gif`;
-
-        // doing this for each tile block. Should do it once with an async function.
-         //this.image.src = `graphics/brick.png`;
-        // end of edit
 
         this.index = index;
-        this.tl = 0;
-        this.tr = 0;
-        this.bl = 0;
-        this.br = 0;
         this.name = name;
         this.type = name;
     }
@@ -757,15 +764,17 @@ class Player extends MovingCharacter {
 
     digHoleLeft() {
         if(this.isHittingFloor()) {
-            tileMap.replaceTileBlock(this.x-1, this.y+32);
+            tileMap.replaceTile(this.x - 1, this.y + 32, 0, "empty");
              this.tileMap.draw(bgCtx);
+             tileMap.restoreWall(this.x - 1, this.y + 32); // Set timeout to restore the wall after 8 sec.
         }
     }
 
     digHoleRight() {
         if(this.isHittingFloor()) {
-            tileMap.replaceTileBlock(this.x+32, this.y+32);
+            tileMap.replaceTile(this.x+32, this.y+32, 0, "empty");
              this.tileMap.draw(bgCtx);
+            tileMap.restoreWall(this.x + 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
         }
     }
 
@@ -929,10 +938,10 @@ class Player extends MovingCharacter {
                     this.digHoleRight();
                 }
                 
-                if(this.input === "") {
-                    this.currentState = "idle";
-                }
+              
 
+                this.input = "";
+                 this.currentState = "idle";
                 break;
             // Fall
              case state.FALL:    
@@ -1404,13 +1413,33 @@ class NPC extends MovingCharacter {
                 break;
             // Trapped
             case state.TRAPPED:
-
-                this.animation.setAnimationIndex(3);
-                this.animation.length = 1;
+                
 
                 if(this.direction === "up") {
-                    this.currentState = "idle";
+
+                    setTimeout(() => {
+                          
+                        this.currentState = "idle";
+                       
+                         // this.y -= 33;
+                       //tileMap.replaceTile(this.x, this.y, 3, "ladder");
+                        this.currentState = "climb";
+                       
+                    }, 2000);
+
+                   this.direction = "";
+                    
                 }
+
+                if(this.direction === "down") {
+                    this.animation.setAnimationIndex(3);
+                    this.animation.length = 1;
+                }
+                else {
+                    this.animation.setAnimationIndex(3);
+                    this.animation.length = 4;    
+                }
+
                 break;
             // Fall
              case state.FALL:    
@@ -1436,37 +1465,31 @@ class NPC extends MovingCharacter {
                             }
                             tileMap.draw(bgCtx);
                                 
+                            // Set timeout for the escape.
                            setTimeout(() => {
-                        
-                               let tileBlock = tileMap.getTileBlock(this.x, this.y);
-                               tileBlock.index = 1; 
-                               this.y -= 33;
-                             
-                                tileMap.draw(bgCtx);
-                               //this.x = capturedBlock.x;
-                                this.direction = "up";
-
-                                // 
-                              
+                           
+                            this.direction = "up";
                                
-                           }, 5000);
+                           }, 4500);
 
-                             this.currentState = "trapped";
+                          
+                           this.currentState = "trapped";
+                           this.direction = "down";
                         }
                         else {
                         this.currentState = "idle";
                     }
                 }
      
-               if(this.isClimbingLadder()) {
+               else if(this.isClimbingLadder()) {
                    this.currentState = "climb";
                }
                
-               if(this.isCollectingGold() && !this.hasGold) {
+               else if(this.isCollectingGold() && !this.hasGold) {
                     this.currentState = "collect";
                }
 
-               if(this.isRopeSwinging()) {
+               else if(this.isRopeSwinging()) {
                     this.currentState = "swing";
                }
 
