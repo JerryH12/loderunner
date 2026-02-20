@@ -66,14 +66,14 @@ const textString = await fetch("http://127.0.0.1:5500/levels/level7.CSV").then(r
 const spritesheetWidth = 160;
 const spritesheetHeight = 320;
  
-
+/*
 var colorArray = [
     '#2C3E50',
     '#E74C3C',
     '#ECF0F1',
     '#3498DB',
     '#2980B9'
-];
+];*/
 
 window.addEventListener('keydown', function(event){
     player.setInput(event.code);
@@ -149,12 +149,12 @@ class Animation {
 }
 
 // Create a sprite for the player.
-const playerSprite = new Image(96,96);
+const playerSprite = new Image(128,192);
 playerSprite.src = "graphics/player_animation3.png";
 const playerAnimation = new Animation(playerSprite);
 
 // create a sprite for the enememies
-const npcSprite = new Image(96,96);
+const npcSprite = new Image(128,192);
 npcSprite.src = "graphics/enemy_animation3.png";
 const npcAnimation = new Animation(npcSprite);
 
@@ -764,9 +764,9 @@ class Player extends MovingCharacter {
 
     digHoleLeft() {
         if(this.isHittingFloor()) {
-            tileMap.replaceTile(this.x - 1, this.y + 32, 0, "empty");
+            tileMap.replaceTile(this.x - 32, this.y + 32, 0, "empty");
              this.tileMap.draw(bgCtx);
-             tileMap.restoreWall(this.x - 1, this.y + 32); // Set timeout to restore the wall after 8 sec.
+             tileMap.restoreWall(this.x - 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
         }
     }
 
@@ -930,18 +930,23 @@ class Player extends MovingCharacter {
                 break;
             // Dig
              case state.DIG:
+                this.animation.length = 1;
+
                 if(this.input === "KeyZ") {
                     this.digHoleLeft();
+                    this.animation.setAnimationIndex(6);
                 }
 
                  if(this.input === "KeyX") {
                     this.digHoleRight();
+                    this.animation.setAnimationIndex(5);
                 }
                 
               
 
-                this.input = "";
-                 this.currentState = "idle";
+                if(this.input === "") {
+                    this.currentState = "idle";
+                }
                 break;
             // Fall
              case state.FALL:    
@@ -973,18 +978,19 @@ class Player extends MovingCharacter {
             // Swing
             case state.SWING:
                
-                this.animation.setAnimationIndex(4);
                 this.animation.length = 1;
                 this.velocityX = this.velocity * delta; this.velocityY = 0;
 
                 if(this.input === "ArrowLeft") {
                     this.shiftPosition(-this.velocityX, this.velocityY);
                     this.animation.length = 3;
+                    this.animation.setAnimationIndex(7);
                 }
 
                 if(this.input === "ArrowRight") {
                     this.shiftPosition(this.velocityX, this.velocityY);
                     this.animation.length = 3;
+                     this.animation.setAnimationIndex(4);
                 }
 
                  if(this.input === "ArrowDown") {
@@ -1362,6 +1368,7 @@ class NPC extends MovingCharacter {
                     if(!this.isHittingRoof() && !this.isAtLadderTop()) {
                         this.shiftPosition(this.velocityX, -this.velocityY);
                         this.resolveLadderTop();
+                        console.log("UP!");
                     }
 
                     this.animation.length = 2;
@@ -1414,16 +1421,35 @@ class NPC extends MovingCharacter {
             // Trapped
             case state.TRAPPED:
                 
+                console.log("TRAPPED");
 
                 if(this.direction === "up") {
 
+                    // tileMap.replaceTile(this.x, this.y, 3, "ladder"); 
+                   
+                      this.tileMap.draw(bgCtx); 
+
                     setTimeout(() => {
-                          
-                        this.currentState = "idle";
+                            
+                          this.y -= 33;
+                     
                        
-                         // this.y -= 33;
-                       //tileMap.replaceTile(this.x, this.y, 3, "ladder");
-                        this.currentState = "climb";
+                      // TODO: How to check if the guards get stuck in the floor and to make them climb up again.
+                      //if(tileMap.getTileBlock(this.x, this.y).id === 0) {
+                       
+                        // this.direction = "up";
+                       this.currentState = "climb";
+                         
+                       
+                     // }
+
+                    //   else {
+                    //      console.log(tileMap.getTileBlock(this.x, this.y));
+                    //     this.y = 32; this.x = 400;
+                    //     this.currentState = "fall";
+                     
+                    //   }
+                       
                        
                     }, 2000);
 
@@ -1434,10 +1460,13 @@ class NPC extends MovingCharacter {
                 if(this.direction === "down") {
                     this.animation.setAnimationIndex(3);
                     this.animation.length = 1;
+                    
                 }
                 else {
-                    this.animation.setAnimationIndex(3);
-                    this.animation.length = 4;    
+                    this.animation.setAnimationIndex(5);
+                    this.animation.length = 2;
+                 
+                     
                 }
 
                 break;
@@ -1457,6 +1486,7 @@ class NPC extends MovingCharacter {
                         if(this.isTrapped()) {
             
                             tileMap.replaceTile(this.x, this.y, 10, "wall");
+                             this.x = tileMap.getTileBlock(this.x, this.y).x;
 
                             if(this.hasGold) {
                              
@@ -1588,7 +1618,7 @@ class NPC extends MovingCharacter {
 
                 // Idle next to a ladder.
                 if(this.direction === "up" || this.direction === "down") {
-                   this.currentState = "climb"; // Will not climb until up or down is pressed.
+                   this.currentState = "climb"; 
                    
                    //this.snapToLadder();
                   // alert("climb");
@@ -1703,8 +1733,8 @@ function animate(time) {
     player.update(delta);
 
      npc1.update(delta);
-     npc2.update(delta);
-     npc3.update(delta);
+    // npc2.update(delta);
+    // npc3.update(delta);
 
       
     //}
