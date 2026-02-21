@@ -4,6 +4,8 @@ let DEBUG = false;
 // Sound
 let audioCtx = null;
 let coinBuffer = null;
+let laserBuffer = null;
+let currentSource = null;
 
 async function initAudioAndLoad() {
     if(!audioCtx) {
@@ -14,16 +16,34 @@ async function initAudioAndLoad() {
         }
     }
 
-    
-
     if(!coinBuffer) {
         const response = await fetch("sound/collect.wav");
         const arrayBuffer = await response.arrayBuffer();
         coinBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+        const response2 = await fetch("sound/dig.wav");
+        const arrayBuffer2 = await response2.arrayBuffer();
+        laserBuffer = await audioCtx.decodeAudioData(arrayBuffer2);
     }
 }
 
+/*
+async function playOnce(audioBuffer) {
+    const source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+
+    source.loop = false;
+
+    source.connect(audioCtx.destination);
+    source.start(0);
+    currentSource = source;
+}
+*/
+
+
 document.addEventListener("click", initAudioAndLoad, {once: true});
+
+
 
 function playCoin() {
     if(!audioCtx || !coinBuffer) return;
@@ -33,6 +53,16 @@ function playCoin() {
     source.connect(audioCtx.destination);
     source.start(0);
 }
+
+function playLaser() {
+    if(!audioCtx || !laserBuffer) return;
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = laserBuffer;
+    source.connect(audioCtx.destination);
+    source.start(0);
+}
+
 
 
 let canvas = document.querySelector('canvas', {alpha: false});
@@ -108,6 +138,7 @@ window.addEventListener("keyup", function(event) {
     
      player.setInput("");
    
+    
    
 });
 
@@ -764,17 +795,25 @@ class Player extends MovingCharacter {
 
     digHoleLeft() {
         if(this.isHittingFloor()) {
-            tileMap.replaceTile(this.x - 32, this.y + 32, 0, "empty");
-             this.tileMap.draw(bgCtx);
-             tileMap.restoreWall(this.x - 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
+           
+            if(tileMap.getTileBlock(this.x - 32, this.y + 32).name != "empty") {
+                playLaser();
+                tileMap.replaceTile(this.x - 32, this.y + 32, 0, "empty");
+                this.tileMap.draw(bgCtx);
+                tileMap.restoreWall(this.x - 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
+            }
         }
     }
 
     digHoleRight() {
         if(this.isHittingFloor()) {
-            tileMap.replaceTile(this.x+32, this.y+32, 0, "empty");
-             this.tileMap.draw(bgCtx);
-            tileMap.restoreWall(this.x + 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
+           
+             if(tileMap.getTileBlock(this.x + 32, this.y + 32).name != "empty") {
+                playLaser();
+                tileMap.replaceTile(this.x+32, this.y+32, 0, "empty");
+                this.tileMap.draw(bgCtx);
+                tileMap.restoreWall(this.x + 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
+             }
         }
     }
 
@@ -931,19 +970,17 @@ class Player extends MovingCharacter {
             // Dig
              case state.DIG:
                 this.animation.length = 1;
-
+              
                 if(this.input === "KeyZ") {
                     this.digHoleLeft();
-                    this.animation.setAnimationIndex(6);
+                    this.animation.setAnimationIndex(6);            
                 }
 
                  if(this.input === "KeyX") {
                     this.digHoleRight();
-                    this.animation.setAnimationIndex(5);
+                    this.animation.setAnimationIndex(5);      
                 }
                 
-              
-
                 if(this.input === "") {
                     this.currentState = "idle";
                 }
