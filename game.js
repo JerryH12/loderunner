@@ -179,15 +179,23 @@ class Animation {
     }
 }
 
+// Graphics
+
 // Create a sprite for the player.
 const playerSprite = new Image(128,192);
 playerSprite.src = "graphics/player_animation3.png";
 const playerAnimation = new Animation(playerSprite);
 
-// create a sprite for the enememies
+// Create a sprite for the enememies.
 const npcSprite = new Image(128,192);
 npcSprite.src = "graphics/enemy_animation3.png";
 const npcAnimation = new Animation(npcSprite);
+
+// Create animations for the bricks.
+const tileAnimationSprite = new Image(128,64);
+tileAnimationSprite.src = "graphics/brick_animation.png";
+const tileAnimation = new Animation(tileAnimationSprite);
+
 
 class TileMap {
 
@@ -763,7 +771,7 @@ class TileBlock extends Entity {
             let col = (this.index - 1) % 5;
             let row = parseInt((this.index - 1) / 5);
 
-               ctx.drawImage(image, col*32, row*32, this.width, this.height, this.x, this.y, this.width, this.height);
+            ctx.drawImage(image, col*32, row*32, this.width, this.height, this.x, this.y, this.width, this.height);
         }  
     }
 
@@ -840,7 +848,8 @@ class Player extends MovingCharacter {
       if (typeof this.animation.frame !== "number" || isNaN(this.animation.frame)) { this.animation.frame = 0; }
 
     this.animation.frame += this.velocity * delta * 0.03;
-    
+    tileAnimation.frame += this.velocity * delta * 0.03;
+
     if(this.velocity == 0) {
         this.animation.frame = 0;
     }
@@ -970,15 +979,19 @@ class Player extends MovingCharacter {
             // Dig
              case state.DIG:
                 this.animation.length = 1;
-              
+                tileAnimation.length = 2;
+                tileAnimation.setAnimationIndex(0);
+
                 if(this.input === "KeyZ") {
                     this.digHoleLeft();
-                    this.animation.setAnimationIndex(6);            
+                    this.animation.setAnimationIndex(6);
+                     tileAnimation.animate(this.x - 32, this.y + 32);         
                 }
 
                  if(this.input === "KeyX") {
                     this.digHoleRight();
-                    this.animation.setAnimationIndex(5);      
+                    this.animation.setAnimationIndex(5); 
+                     tileAnimation.animate(this.x + 32, this.y + 32);       
                 }
                 
                 if(this.input === "") {
