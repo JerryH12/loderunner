@@ -5,7 +5,9 @@ let DEBUG = false;
 let audioCtx = null;
 let coinBuffer = null;
 let laserBuffer = null;
+let fallBuffer = null;
 let currentSource = null;
+let osc = null;
 
 async function initAudioAndLoad() {
     if(!audioCtx) {
@@ -24,6 +26,10 @@ async function initAudioAndLoad() {
         const response2 = await fetch("sound/dig.wav");
         const arrayBuffer2 = await response2.arrayBuffer();
         laserBuffer = await audioCtx.decodeAudioData(arrayBuffer2);
+
+        const response3 = await fetch("sound/fall.wav");
+        const arrayBuffer3 = await response3.arrayBuffer();
+        fallBuffer = await audioCtx.decodeAudioData(arrayBuffer3);
     }
 }
 
@@ -63,7 +69,21 @@ function playLaser() {
     source.start(0);
 }
 
+function playFall() {
+    if(!audioCtx || !fallBuffer) return;
+ /*   osc = audioCtx.createOscillator();
+   osc.type = "square";
+   osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+   
+    osc.connect(audioCtx.destination);
+    osc.start();*/
 
+    const source = audioCtx.createBufferSource();
+    source.buffer = fallBuffer;
+    source.connect(audioCtx.destination);
+    source.start(0);
+    currentSource = source;
+}
 
 let canvas = document.querySelector('canvas', {alpha: false});
 canvas.focus();
@@ -88,7 +108,7 @@ bgCtx.fillStyle = 'blue';
 
  //let tileMap = await fetchCSV();
 
-const textString = await fetch("http://127.0.0.1:5500/levels/level7.CSV").then(r => r.text())
+const textString = await fetch("http://127.0.0.1:5500/levels/level4.CSV").then(r => r.text())
 
 
  let rawMap = textString.split(",").map(m => m.trim());
@@ -560,7 +580,7 @@ class MovingCharacter extends Entity {
 
         //return tiles.some(t => t.name === "wall");
         for (let t of tiles) {
-        if (t.name === "wall") {
+        if (t.name === "wall" || t.name === "solid") {
             // Compute tile boundaries
             const tileLeft = t.x * 32;
 
@@ -585,7 +605,7 @@ class MovingCharacter extends Entity {
          let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY, this.hitboxWidth, this.hitboxHeight); 
         //return tiles.some(t => t.name === "wall");
         for (let t of tiles) {
-        if (t.name === "wall") {
+        if (t.name === "wall" || t.name === "solid") {
             // Compute tile boundaries
             const tileLeft = t.x * 32;
 
@@ -611,7 +631,7 @@ class MovingCharacter extends Entity {
         //return tiles.some(t => t.name === "wall");
 
         for (let t of tiles) {
-            if (t.name === "wall") {
+            if (t.name === "wall" || t.name === "solid") {
                 // Compute tile boundaries
                 const tileTop = t.y * 32;
 
@@ -1001,6 +1021,13 @@ class Player extends MovingCharacter {
             // Fall
              case state.FALL:    
                  console.log("state=FALL");
+
+              // TODO: play sound once and stop at the right moment.
+                  //    playFall();
+                     
+
+                // osc.stop(audioCtx.currentTime + 0.1);
+
                  this.animation.setAnimationIndex(3);
                  this.animation.length = 1;
 
@@ -1009,6 +1036,7 @@ class Player extends MovingCharacter {
                 this.shiftPosition(this.velocityX, this.velocityY);
 
                 if(this.isHittingFloor()) {
+                        this.isPlayingSound = true;
                         this.resolveFloorCollision();
                         this.currentState = "idle";
                     }
@@ -1137,6 +1165,7 @@ class Player extends MovingCharacter {
                 }
 
                 if(this.isFreefalling()) {
+                   
                     this.currentState = "fall";
                 }
                 break;
@@ -1730,7 +1759,7 @@ async function buildBackground() {
 }
 
 // TODO: Global variabel orsakar problem när den anropas i klasser.
-const player = new Player(64,224, tileMap, {x: 300, y: 200});
+const player = new Player(0,0, tileMap, {x: 300, y: 200});
 const npc1 = new NPC(680,480, tileMap);
 const npc2 = new NPC(730,480, tileMap);
 const npc3 = new NPC(700,480, tileMap);
