@@ -104,14 +104,12 @@ bgCtx.fillStyle = 'blue';
 
  let score = 0;
  let lives = 4;
- let level = 5;
+ let level = 1;
 
  //let tileMap = await fetchCSV();
 
-const textString = await fetch("http://127.0.0.1:5500/levels/level4.CSV").then(r => r.text())
 
 
- let rawMap = textString.split(",").map(m => m.trim());
 
 const spritesheetWidth = 160;
 const spritesheetHeight = 320;
@@ -188,10 +186,13 @@ class Animation {
         this.animationIndex = 0;
         this.length = 3;
         this.frame = 0;
+        this.loop = true;
     }
 
     animate(x, y) {
-        c.drawImage(this.sprites, (Math.floor(this.frame) % this.length) * 32, this.animationIndex * 32, 32, 32, x, y, 32, 32);
+        if(this.loop || Math.floor(this.frame) < this.length) {
+            c.drawImage(this.sprites, (Math.floor(this.frame) % this.length) * 32, this.animationIndex * 32, 32, 32, x, y, 32, 32);
+        }
     }
 
     setAnimationIndex(index) {
@@ -445,67 +446,6 @@ class MovingCharacter extends Entity {
         // this.animation.start();
     }
 
-     moveLeft() {  
-       // this.velocity = 350;
-        this.animation.setAnimationIndex(1); 
-        this.animation.length = 3;
-       
-        if(!this.isHittingLeftWall() && this.x > 0) {  
-            this.shiftPosition(-this.dx, 0);
-        }
-
-        this.resolveLeftWallCollision(); // TODO: Not being able to run through walls.
-        
-       
-    }
-
-    
-     moveRight() {
-       // this.velocity = 350;
-        this.animation.setAnimationIndex(0);
-        this.animation.length = 3;    
-       
-        if(!this.isHittingRightWall() && this.x < 864) {  
-            this.shiftPosition(this.dx, 0);
-        }    
-        
-       this.resolveRightWallCollision();
-    }
-
-     moveUp() {  
-      // this.velocity = 320;
-        this.animation.setAnimationIndex(2);
-        this.animation.length = 2;
-
-            this.snapToLadder(this.x, this.y);
-        
-        if(!this.isHittingRoof() && !this.isAtLadderTop()) {
-            this.shiftPosition(0, -this.dy);
-           // this.resolveLadderTop();
-        }
-        
-        /*
-        if(this.isAtLadderTop()){
-            console.log("ladder at top");
-            this.ignoreGravity = true;
-            this.fallSpeed = 0;
-            this.resolveLadderTop();
-        }*/
-    }
-
-    moveDown() {
-          //  this.velocity = 320;
-            this.animation.setAnimationIndex(2);
-            this.animation.length = 2;
-         
-            this.snapToLadder(this.x, this.y);
-               
-           // if(this.isHittingFloor() == false) {
-                this.shiftPosition(0, this.dy);
-          //  }   
-          this.resolveFloorCollision();   
-    }
-
     snapToLadder(x, y) {    
         let tiles = this.tileMap.getOverlappingTiles(x, y, 32, 64);
 
@@ -543,7 +483,7 @@ class MovingCharacter extends Entity {
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
         let tiles = this.tileMap.getOverlappingTiles(hitboxX-1, hitboxY, this.hitboxWidth, this.hitboxHeight);
-        return tiles.some(t => t.name === "wall");
+        return tiles.some(t => t.name === "wall" || t.name === "solid");
 
         // if((this.isCollidingWith(neighborLeftUp) && neighborLeftUp.name == "wall") || 
         //     this.isCollidingWith(neighborLeftDown) && neighborLeftDown.name == "wall") {
@@ -560,7 +500,7 @@ class MovingCharacter extends Entity {
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
          let tiles = this.tileMap.getOverlappingTiles(hitboxX+1, hitboxY, this.hitboxWidth, this.hitboxHeight);
-        return tiles.some(t => t.name === "wall");
+        return tiles.some(t => t.name === "wall" || t.name === "solid");
 
         // TODO: Collision box
         // if((this.isCollidingWith(neighborRightUp) && neighborRightUp.name == "wall") || 
@@ -824,8 +764,11 @@ class Player extends MovingCharacter {
     digHoleLeft() {
         if(this.isHittingFloor()) {
            
-            if(tileMap.getTileBlock(this.x - 32, this.y + 32).name != "empty") {
+            if(tileMap.getTileBlock(this.x - 32, this.y + 32).name === "wall") {
                 playLaser();
+                this.animation.setAnimationIndex(6);
+                tileAnimation.length = 2;
+                     tileAnimation.animate(this.x - 32, this.y + 32);  
                 tileMap.replaceTile(this.x - 32, this.y + 32, 0, "empty");
                 this.tileMap.draw(bgCtx);
                 tileMap.restoreWall(this.x - 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
@@ -836,8 +779,11 @@ class Player extends MovingCharacter {
     digHoleRight() {
         if(this.isHittingFloor()) {
            
-             if(tileMap.getTileBlock(this.x + 32, this.y + 32).name != "empty") {
+             if(tileMap.getTileBlock(this.x + 32, this.y + 32).name === "wall") {
                 playLaser();
+                 this.animation.setAnimationIndex(5); 
+                  tileAnimation.length = 2;
+                     tileAnimation.animate(this.x + 32, this.y + 32);   
                 tileMap.replaceTile(this.x+32, this.y+32, 0, "empty");
                 this.tileMap.draw(bgCtx);
                 tileMap.restoreWall(this.x + 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
@@ -874,54 +820,6 @@ class Player extends MovingCharacter {
         this.animation.frame = 0;
     }
 
-        //  switch(true) {
-        //     case this.playerAction.climb:
-        //         DEBUG && console.log("CLIMB");
-              
-        //         this.dx = this.velocity * delta; this.dy = this.velocity * delta;
-        //         break;
-        //      case this.playerAction.collect:
-        //         DEBUG && console.log("COLLECT");
-                
-        //          this.collectGold();    
-        //          this.tileMap.draw(bgCtx);
-        //         score+=250; // collect gold and increase score by 250.
-                
-        //         break;
-        //      case this.playerAction.dig:
-        //         //
-        //         break;
-        //      case this.playerAction.fall:
-        //        /*
-        //          DEBUG && console.log("FALL");
-        //          this.animation.setAnimationIndex(3);
-        //          this.animation.length = 1;
-                 
-        //         this.dx = 0; this.dy = 0; // disable user control while falling.
-        //         this.shiftPosition(0, this.fallSpeed * delta);
-
-        //         if(this.isHittingFloor) {
-        //             this.resolveFloorCollision();
-        //         }
-                
-        //         this.isAtLadderTop();
-        //         this.resolveLadderTop();*/
-
-        //         break;
-        //     case this.playerAction.swing:
-        //         DEBUG && console.log("SWING");
-        //         this.animation.setAnimationIndex(4);
-                
-        //         this.dx = this.velocity * delta; this.dy = this.velocity * delta;
-        //         break;
-        //      default:
-        //          DEBUG && console.log("NORMAL");
-        //          this.dx = this.velocity * delta; this.dy = 0;
- 
-        //         // console.log("velocity:", delta);
-        //         break;        
-        // }
-
         if(this.ignoreGravity) {
                     this.ignoreGravity = false;
                  }
@@ -939,8 +837,6 @@ class Player extends MovingCharacter {
             WALK: "walk",
             COLLECT: "collect"
         });
-
-        
 
          switch(this.currentState) {
             // Climb
@@ -999,19 +895,17 @@ class Player extends MovingCharacter {
             // Dig
              case state.DIG:
                 this.animation.length = 1;
-                tileAnimation.length = 2;
+                
                 tileAnimation.setAnimationIndex(0);
 
                 if(this.input === "KeyZ") {
                     this.digHoleLeft();
-                    this.animation.setAnimationIndex(6);
-                     tileAnimation.animate(this.x - 32, this.y + 32);         
+                           
                 }
 
                  if(this.input === "KeyX") {
                     this.digHoleRight();
-                    this.animation.setAnimationIndex(5); 
-                     tileAnimation.animate(this.x + 32, this.y + 32);       
+                       
                 }
                 
                 if(this.input === "") {
@@ -1060,13 +954,19 @@ class Player extends MovingCharacter {
                 this.velocityX = this.velocity * delta; this.velocityY = 0;
 
                 if(this.input === "ArrowLeft") {
-                    this.shiftPosition(-this.velocityX, this.velocityY);
+                    if(!this.isHittingLeftWall()) {
+                        this.shiftPosition(-this.velocityX, this.velocityY);
+                        this.resolveRightWallCollision();
+                    }
                     this.animation.length = 3;
                     this.animation.setAnimationIndex(7);
                 }
 
                 if(this.input === "ArrowRight") {
-                    this.shiftPosition(this.velocityX, this.velocityY);
+                    if(!this.isHittingRightWall()) {
+                        this.shiftPosition(this.velocityX, this.velocityY);
+                        this.resolveRightWallCollision();
+                    }
                     this.animation.length = 3;
                      this.animation.setAnimationIndex(4);
                 }
@@ -1735,6 +1635,9 @@ class NPC extends MovingCharacter {
     }
     
 }
+
+const textString = await fetch(`http://127.0.0.1:5500/levels/level${level}.CSV`).then(r => r.text())
+let rawMap = textString.split(",").map(m => m.trim());
 
 // Create a tilemap from data.
 const tileMap = new TileMap(rawMap);
