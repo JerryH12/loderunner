@@ -126,6 +126,16 @@ var colorArray = [
 window.addEventListener('keydown', function(event){
     player.setInput(event.code);
 
+    if(event.code === "KeyC") {
+        cancelAnimationFrame(requestAnimationId);
+        level += level < 4 ? 1 : -3;
+        loadMap().then(() => {
+    buildBackground();
+        }).then(() => {
+            animate();
+        });
+    }
+
     // if(event.code === "ArrowLeft") {
     //    // player.moveLeft();
     // }
@@ -447,7 +457,7 @@ class MovingCharacter extends Entity {
     }
 
     snapToLadder(x, y) {    
-        let tiles = this.tileMap.getOverlappingTiles(x, y, 32, 64);
+        let tiles = tileMap.getOverlappingTiles(x, y, 32, 64);
 
         tiles.forEach(t => {
             if(t.name === "ladder" && Math.abs(t.x * 32 - x) < 20) {
@@ -457,18 +467,18 @@ class MovingCharacter extends Entity {
     }
 
     isRopeSwinging() {
-        let tiles = this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32);   
+        let tiles = tileMap.getOverlappingTiles(this.x, this.y, 32, 32);   
         return tiles.some(t => t.name === "rope" && Math.abs(t.y * 32 - this.y) < 8);
     }
 
     // different behavior depending on player and NPC.
     isCollectingGold() { 
-        let tiles = this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32);
+        let tiles = tileMap.getOverlappingTiles(this.x, this.y, 32, 32);
         return tiles.some(t => t.name === "gold" && Math.abs(t.x * 32 - this.x) < 8);
     }
     
     isTrapped() {
-        let tiles = this.tileMap.getOverlappingTiles(this.x-1, this.y, 96, 31);
+        let tiles = tileMap.getOverlappingTiles(this.x-1, this.y, 96, 31);
       
       //  tiles.forEach(t=> console.log(t));
        
@@ -482,7 +492,7 @@ class MovingCharacter extends Entity {
          const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
-        let tiles = this.tileMap.getOverlappingTiles(hitboxX-1, hitboxY, this.hitboxWidth, this.hitboxHeight);
+        let tiles = tileMap.getOverlappingTiles(hitboxX-1, hitboxY, this.hitboxWidth, this.hitboxHeight);
         return tiles.some(t => t.name === "wall" || t.name === "solid");
 
         // if((this.isCollidingWith(neighborLeftUp) && neighborLeftUp.name == "wall") || 
@@ -499,7 +509,7 @@ class MovingCharacter extends Entity {
         const hitboxX = this.x + (32 - this.hitboxWidth) / 2; // 6 pixels less wide than actual size.
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
-         let tiles = this.tileMap.getOverlappingTiles(hitboxX+1, hitboxY, this.hitboxWidth, this.hitboxHeight);
+         let tiles = tileMap.getOverlappingTiles(hitboxX+1, hitboxY, this.hitboxWidth, this.hitboxHeight);
         return tiles.some(t => t.name === "wall" || t.name === "solid");
 
         // TODO: Collision box
@@ -516,7 +526,7 @@ class MovingCharacter extends Entity {
         const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
-         let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY, this.hitboxWidth, this.hitboxHeight);
+         let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY, this.hitboxWidth, this.hitboxHeight);
 
         //return tiles.some(t => t.name === "wall");
         for (let t of tiles) {
@@ -542,7 +552,7 @@ class MovingCharacter extends Entity {
          const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
-         let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY, this.hitboxWidth, this.hitboxHeight); 
+         let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY, this.hitboxWidth, this.hitboxHeight); 
         //return tiles.some(t => t.name === "wall");
         for (let t of tiles) {
         if (t.name === "wall" || t.name === "solid") {
@@ -567,7 +577,7 @@ class MovingCharacter extends Entity {
         const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
-         let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY, this.hitboxWidth, this.hitboxHeight); 
+         let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY, this.hitboxWidth, this.hitboxHeight); 
         //return tiles.some(t => t.name === "wall");
 
         for (let t of tiles) {
@@ -595,7 +605,7 @@ class MovingCharacter extends Entity {
         const hitboxY = this.y + (32 - this.hitboxHeight);
         
         //let tiles = this.tileMap.getOverlappingTiles(this.x, this.y+1, 32, 32); 
-        let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight); 
+        let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight); 
         return tiles.some(t => t.name === "wall" || t.name === "border" || t.name === "solid"); 
     }
 
@@ -614,7 +624,7 @@ class MovingCharacter extends Entity {
         const hitboxY = this.y;// + (32 - this.hitboxHeight);
         
         //let tiles = this.tileMap.getOverlappingTiles(this.x, this.y+1, 32, 32); 
-        let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight); 
+        let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight); 
         return tiles.some(t => t.name === "wall"); 
     }
 
@@ -633,8 +643,8 @@ class MovingCharacter extends Entity {
         const tileX = Math.floor(feetX / 32);
         const tileY = Math.floor(feetY / 32);
 
-        const feetTile = this.tileMap.blocks[tileY * this.tileMap.width + tileX];
-        const tileBelowFeet = this.tileMap.blocks[(tileY + 1) * this.tileMap.width + tileX];
+        const feetTile = tileMap.blocks[tileY * tileMap.width + tileX];
+        const tileBelowFeet = tileMap.blocks[(tileY + 1) * tileMap.width + tileX];
 
         if(tileBelowFeet.name === "ladder" && feetTile.name === "empty" && Math.abs(feetY - tileBelowFeet.y) < 4) {
         this.y = tileBelowFeet.y - 32;
@@ -652,8 +662,8 @@ class MovingCharacter extends Entity {
         const tileX = Math.floor(feetX / 32);
         const tileY = Math.floor(feetY / 32);
 
-        const feetTile = this.tileMap.blocks[tileY * this.tileMap.width + tileX];
-        const tileBelowFeet = this.tileMap.blocks[(tileY + 1) * this.tileMap.width + tileX];
+        const feetTile = tileMap.blocks[tileY * tileMap.width + tileX];
+        const tileBelowFeet = tileMap.blocks[(tileY + 1) * tileMap.width + tileX];
 
         return (tileBelowFeet.name === "ladder" && feetTile.name === "empty");
     }
@@ -662,7 +672,7 @@ class MovingCharacter extends Entity {
         const hitboxX = this.x + (32 - this.hitboxWidth) / 2;
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
-         let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight);
+         let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight);
       //  return tiles.some(t => t.name === "ladder" && t.x * 32 === this.x);
       return tiles.some(t => t.name === "ladder" && Math.abs(t.x * 32 - hitboxX) < 16);
     }
@@ -676,7 +686,7 @@ class MovingCharacter extends Entity {
         const hitboxY = this.y + (32 - this.hitboxHeight);
 
         //let tiles = this.tileMap.getOverlappingTiles(xCenter, yFoot, 1, 1);
-        let tiles = this.tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight);
+        let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight);  
 
         return(tiles.every(t => t.name === "empty" || 
             (t.name === "rope" && Math.abs(t.y*32-this.y) > 3) ||
@@ -685,10 +695,10 @@ class MovingCharacter extends Entity {
     }
 
     collectGold() {
-        let tiles = this.tileMap.getOverlappingTiles(this.x, this.y, 32, 32);
+        let tiles = tileMap.getOverlappingTiles(this.x, this.y, 32, 32);
         tiles.forEach(t => {
             if(t.name === "gold") {
-                this.tileMap.replaceTileBlock(t.x * 32, t.y * 32);
+                tileMap.replaceTileBlock(t.x * 32, t.y * 32);
                
                
             }
@@ -770,7 +780,7 @@ class Player extends MovingCharacter {
                 tileAnimation.length = 2;
                      tileAnimation.animate(this.x - 32, this.y + 32);  
                 tileMap.replaceTile(this.x - 32, this.y + 32, 0, "empty");
-                this.tileMap.draw(bgCtx);
+                tileMap.draw(bgCtx);
                 tileMap.restoreWall(this.x - 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
             }
         }
@@ -785,7 +795,7 @@ class Player extends MovingCharacter {
                   tileAnimation.length = 2;
                      tileAnimation.animate(this.x + 32, this.y + 32);   
                 tileMap.replaceTile(this.x+32, this.y+32, 0, "empty");
-                this.tileMap.draw(bgCtx);
+                tileMap.draw(bgCtx);
                 tileMap.restoreWall(this.x + 32, this.y + 32); // Set timeout to restore the wall after 8 sec.
              }
         }
@@ -887,7 +897,7 @@ class Player extends MovingCharacter {
                     
                  this.collectGold();
                   playCoin();    
-                 this.tileMap.draw(bgCtx);
+                 tileMap.draw(bgCtx);
                 score+=250; // collect gold and increase the score by 250.
                 
                 this.currentState = "fall";
@@ -955,6 +965,7 @@ class Player extends MovingCharacter {
 
                 if(this.input === "ArrowLeft") {
                     if(!this.isHittingLeftWall()) {
+                       
                         this.shiftPosition(-this.velocityX, this.velocityY);
                         this.resolveRightWallCollision();
                     }
@@ -962,8 +973,9 @@ class Player extends MovingCharacter {
                     this.animation.setAnimationIndex(7);
                 }
 
-                if(this.input === "ArrowRight") {
+                else if(this.input === "ArrowRight") {
                     if(!this.isHittingRightWall()) {
+                       
                         this.shiftPosition(this.velocityX, this.velocityY);
                         this.resolveRightWallCollision();
                     }
@@ -971,10 +983,14 @@ class Player extends MovingCharacter {
                      this.animation.setAnimationIndex(4);
                 }
 
-                 if(this.input === "ArrowDown") {
+                else if(this.input === "ArrowDown") {
                     this.currentState = "fall";
                 }
-                
+                else {
+                    // Adjust the vertical position.
+                     this.y = tileMap.getTileBlock(this.x, this.y).y;
+                }
+
                 if(this.isClimbingLadder()) {
                     this.currentState = "climb";
                 }
@@ -1391,7 +1407,7 @@ class NPC extends MovingCharacter {
              
                 this.collectGold();
                 this.hasGold = true;
-                this.tileMap.draw(bgCtx);  
+                tileMap.draw(bgCtx);  
              
                 
                               
@@ -1406,7 +1422,7 @@ class NPC extends MovingCharacter {
 
                     // tileMap.replaceTile(this.x, this.y, 3, "ladder"); 
                    
-                      this.tileMap.draw(bgCtx); 
+                      tileMap.draw(bgCtx); 
 
                     setTimeout(() => {
                             
@@ -1636,11 +1652,15 @@ class NPC extends MovingCharacter {
     
 }
 
-const textString = await fetch(`http://127.0.0.1:5500/levels/level${level}.CSV`).then(r => r.text())
-let rawMap = textString.split(",").map(m => m.trim());
+let tileMap = null;
 
-// Create a tilemap from data.
-const tileMap = new TileMap(rawMap);
+async function loadMap() {
+    const textString = await fetch(`http://127.0.0.1:5500/levels/level${level}.CSV`).then(r => r.text())
+    let rawMap = textString.split(",").map(m => m.trim());
+
+    // Create a tilemap from data.
+    tileMap = new TileMap(rawMap);
+}
 
 // Load spritesheet.
 function preloadTileImages() {
@@ -1689,10 +1709,12 @@ collider.enemies.push(npc3);
 
 let lastTime = 0;
 let delta = 0;
+let requestAnimationId = 0;
+
 function animate(time) {
    
    
-    requestAnimationFrame(animate);
+    requestAnimationId = requestAnimationFrame(animate);
         
        
 
@@ -1725,7 +1747,10 @@ function animate(time) {
     //player.collisionState && score++;
 }
 
-await buildBackground().then(() => {animate();
+await loadMap().then(() => {
+    buildBackground();
+}).then(() => {
+    animate();
  });
 // window.addEventListener("click", ()=> {
 //     buildBackground().then(()=> {
