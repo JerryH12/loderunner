@@ -130,7 +130,9 @@ window.addEventListener('keydown', function(event){
         cancelAnimationFrame(requestAnimationId);
         level += level < 4 ? 1 : -3;
         loadMap().then(() => {
-    buildBackground();
+            buildBackground();
+        }).then(() => {
+            createGuards();
         }).then(() => {
             animate();
         });
@@ -235,7 +237,7 @@ class TileMap {
         this.blocks = this.createBlocksFromMap(mapData);
         this.data = [];
         this.width = 28; // Width in blocks.
-        this.height = 21;
+        this.height = 18;
         this.images = null;
     }
 
@@ -1101,7 +1103,7 @@ class NPC extends MovingCharacter {
     
         this.enemies = [];
         this.animationIndex = 1;
-        this.velocity = 150;
+        this.velocity = 80;
 
         this.junctions = [];
         this.junctionPoint = null;
@@ -1653,6 +1655,20 @@ class NPC extends MovingCharacter {
 }
 
 let tileMap = null;
+const guards = [];
+
+// test
+async function loadJSON() {
+    const json = await fetch("http://127.0.0.1:5500/levels/level3.tmj").then(r => r.json());
+     tileMap = new TileMap(json.layers[0].data);
+
+     json.layers[1].objects.forEach(o => {
+        guards.push(new NPC(o.x - 32, o.y - 32, tileMap));
+     });
+}
+
+
+//await loadJSON().then(() => console.log(data.layers[1].objects));
 
 async function loadMap() {
     const textString = await fetch(`http://127.0.0.1:5500/levels/level${level}.CSV`).then(r => r.text())
@@ -1681,31 +1697,55 @@ async function buildBackground() {
     tileMap.draw(bgCtx);
 }
 
+async function createGuards() {
+     // Create the guards.
+     //guards.length = 0;
+     tileMap.blocks.forEach(t => {
+       
+        if(t.name === "enemy") {
+            guards.push(new NPC(t.x, t.y, tileMap));
+        }
+    });
+
+    for(let n = 0; n < guards.length; n++) {
+        guards[n].playerRef = player;
+        guards[n].addAnimation(npcAnimation);
+        collider.enemies.push(guards[n]);
+    }
+}
+
 // TODO: Global variabel orsakar problem när den anropas i klasser.
 const player = new Player(0,0, tileMap, {x: 300, y: 200});
-const npc1 = new NPC(680,480, tileMap);
-const npc2 = new NPC(730,480, tileMap);
-const npc3 = new NPC(700,480, tileMap);
+
+
+// const npc1 = new NPC(680,480, tileMap);
+// const npc2 = new NPC(730,480, tileMap);
+// const npc3 = new NPC(700,480, tileMap);
+
+
+
 
 // Add references to the other objects.
-npc1.enemies.push(npc2, npc3);
-npc2.enemies.push(npc1, npc3);
-npc3.enemies.push(npc1, npc2);
+ //npc1.enemies.push(npc2, npc3);
+// npc2.enemies.push(npc1, npc3);
+// npc3.enemies.push(npc1, npc2);
 
-npc1.playerRef = player;
-npc2.playerRef = player;
-npc3.playerRef = player;
+
+
+// npc1.playerRef = player;
+// npc2.playerRef = player;
+// npc3.playerRef = player;
 
 // add animations to characters
 player.addAnimation(playerAnimation);
-npc1.addAnimation(npcAnimation);
-npc2.addAnimation(npcAnimation);
-npc3.addAnimation(npcAnimation);
-
 collider.player = player;
-collider.enemies.push(npc1);
-collider.enemies.push(npc2);
-collider.enemies.push(npc3);
+
+console.log(guards);
+
+
+// collider.enemies.push(npc1);
+// collider.enemies.push(npc2);
+// collider.enemies.push(npc3);
 
 let lastTime = 0;
 let delta = 0;
@@ -1713,16 +1753,12 @@ let requestAnimationId = 0;
 
 function animate(time) {
    
-   
     requestAnimationId = requestAnimationFrame(animate);
         
-       
-
     delta = lastTime ? (time - lastTime) / 1000 : 0; // seconds
     delta = Math.min(delta, 0.017);
     lastTime = time;
 
-   
     c.fillStyle = "black";
     c.fillRect(0, 0, window.innerWidth, window.innerHeight);
      c.drawImage(bgCanvas, 0, 0);
@@ -1735,8 +1771,8 @@ function animate(time) {
 
    // if(!isNaN(delta)) {
     player.update(delta);
-
-     npc1.update(delta);
+    guards.forEach(guard => guard.update(delta));
+     //npc1.update(delta);
     // npc2.update(delta);
     // npc3.update(delta);
 
@@ -1747,8 +1783,10 @@ function animate(time) {
     //player.collisionState && score++;
 }
 
-await loadMap().then(() => {
+await loadJSON().then(() => {
     buildBackground();
+}).then(() => {
+    createGuards();
 }).then(() => {
     animate();
  });
