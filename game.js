@@ -128,8 +128,8 @@ window.addEventListener('keydown', function(event){
 
     if(event.code === "KeyC") {
         cancelAnimationFrame(requestAnimationId);
-        level += level < 4 ? 1 : -3;
-        loadMap().then(() => {
+        level += level < 6 ? 1 : -3;
+        loadJSON().then(() => {
             buildBackground();
         }).then(() => {
             createGuards();
@@ -583,7 +583,7 @@ class MovingCharacter extends Entity {
         //return tiles.some(t => t.name === "wall");
 
         for (let t of tiles) {
-            if (t.name === "wall" || t.name === "solid") {
+            if (t.name === "wall" || t.name === "solid" || t.name === "border") {
                 // Compute tile boundaries
                 const tileTop = t.y * 32;
 
@@ -873,10 +873,11 @@ class Player extends MovingCharacter {
                  if(this.input === "ArrowDown") {
                     this.snapToLadder(this.x, this.y);
 
-                  
+                    if(!this.isHittingFloor()) {
                         this.shiftPosition(this.velocityX, this.velocityY);
                         this.resolveFloorCollision();
-                    
+                    }
+
 
                      if(!this.isClimbingLadder()) {
                         this.currentState = "fall";
@@ -939,14 +940,17 @@ class Player extends MovingCharacter {
 
                  this.velocityX = 0; this.velocityY = this.fallSpeed * delta;
                 
-                this.shiftPosition(this.velocityX, this.velocityY);
+               
 
                 if(this.isHittingFloor()) {
                         this.isPlayingSound = true;
                         this.resolveFloorCollision();
                         this.currentState = "idle";
-                    }
-     
+                }
+                else {
+                     this.shiftPosition(this.velocityX, this.velocityY);
+                }
+
                if(this.isClimbingLadder()) {
                    this.currentState = "climb";
                }
@@ -966,7 +970,7 @@ class Player extends MovingCharacter {
                 this.velocityX = this.velocity * delta; this.velocityY = 0;
 
                 if(this.input === "ArrowLeft") {
-                    if(!this.isHittingLeftWall()) {
+                    if(!this.isHittingLeftWall() && this.x > 0) {
                        
                         this.shiftPosition(-this.velocityX, this.velocityY);
                         this.resolveRightWallCollision();
@@ -976,7 +980,7 @@ class Player extends MovingCharacter {
                 }
 
                 else if(this.input === "ArrowRight") {
-                    if(!this.isHittingRightWall()) {
+                    if(!this.isHittingRightWall() && this.x < 864) {
                        
                         this.shiftPosition(this.velocityX, this.velocityY);
                         this.resolveRightWallCollision();
@@ -1655,16 +1659,13 @@ class NPC extends MovingCharacter {
 }
 
 let tileMap = null;
-const guards = [];
+let guards = [];
+let json = null;
 
 // test
 async function loadJSON() {
-    const json = await fetch("http://127.0.0.1:5500/levels/level3.tmj").then(r => r.json());
+    json = await fetch(`http://127.0.0.1:5500/levels/level${level}.tmj`).then(r => r.json());
      tileMap = new TileMap(json.layers[0].data);
-
-     json.layers[1].objects.forEach(o => {
-        guards.push(new NPC(o.x - 32, o.y - 32, tileMap));
-     });
 }
 
 
@@ -1697,15 +1698,13 @@ async function buildBackground() {
     tileMap.draw(bgCtx);
 }
 
+
 async function createGuards() {
      // Create the guards.
-     //guards.length = 0;
-     tileMap.blocks.forEach(t => {
-       
-        if(t.name === "enemy") {
-            guards.push(new NPC(t.x, t.y, tileMap));
-        }
-    });
+     guards = [];
+     json.layers[1].objects.forEach(o => {
+      //  guards.push(new NPC(o.x - 32, o.y - 32, tileMap));
+     });
 
     for(let n = 0; n < guards.length; n++) {
         guards[n].playerRef = player;
