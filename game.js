@@ -128,7 +128,7 @@ window.addEventListener('keydown', function(event){
 
     if(event.code === "KeyC") {
         cancelAnimationFrame(requestAnimationId);
-        level += level < 6 ? 1 : -3;
+        level += level < 9 ? 1 : -8;
         loadJSON().then(() => {
             buildBackground();
         }).then(() => {
