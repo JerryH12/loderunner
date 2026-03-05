@@ -179,14 +179,20 @@ const collider = {
         //const isCollided = this.enemies.some((enemy)=> player.isCollidingWith(enemy));
         this.enemies.forEach(enemy => {
             if(player.isCollidingWith(enemy)) {
-                if(player.y < enemy.y) {  
-                    player.y = Math.floor(enemy.y) - 33;       
+                
+                if(Math.abs(Math.floor(player.y) + 31 - Math.floor(enemy.y)) < 2)
+                   {  
+                    player.y = Math.floor(enemy.y) - 33;
+                 // player.y = tileMap.getTileBlock(player.x, player.y).y - 1;
+                 //  player.gravityActivated = false;    
+                  // alert("collide"); 
+                 
                 }
-            else {
-                player.setCollisionState(true);
+                else {
+                player.setCollisionState(true);    
                 }
             } // end of if
-        
+           
         });
     }
 }; // end of collider
@@ -445,7 +451,8 @@ class MovingCharacter extends Entity {
         this.hitboxWidth = 20;
         this.hitboxHeight = 28;
 
-        this.ignoreGravity = false;
+        //this.ignoreGravity = false;
+        this.gravityActivated = true;
         this.justExitedLadder = false;
 
         // Initial state
@@ -480,11 +487,17 @@ class MovingCharacter extends Entity {
     }
     
     isTrapped() {
-        let tiles = tileMap.getOverlappingTiles(this.x-1, this.y, 96, 31);
+       // let tiles = tileMap.getOverlappingTiles(this.x-1, this.y, 96, 31);
       
       //  tiles.forEach(t=> console.log(t));
        
-        return ( tiles[0].name === "wall" && tiles[1].name === "wall");  
+        //return ( tiles[0].name === "wall" && tiles[1].name === "wall");  
+
+        let tileOccupied = tileMap.getTileBlock(this.x, this.y);
+        let tileLeft = tileMap.getTileBlock(tileOccupied.x - 32, this.y);
+        let tileRight = tileMap.getTileBlock(tileOccupied.x + 32, this.y);
+       // console.log(tileLeft.x, tileOccupied.x, tileRight.x);
+        return (tileOccupied.name === "empty" && tileLeft.name === "wall" && tileRight.name === "wall");
     }
 
     isHittingLeftWall() {
@@ -690,6 +703,12 @@ class MovingCharacter extends Entity {
         //let tiles = this.tileMap.getOverlappingTiles(xCenter, yFoot, 1, 1);
         let tiles = tileMap.getOverlappingTiles(hitboxX, hitboxY+1, this.hitboxWidth, this.hitboxHeight);  
 
+      // let tiles = tileMap.getOverlappingTiles(this.x, this.y+32, 32, 32);
+      /* let tile = tileMap.getTileBlock(this.x, this.y + 32);
+        return (tile.name === "empty" || 
+            (tile.name === "rope" && Math.abs(tile.y*32-this.y) > 3) ||
+             (tile.name === "gold" && Math.abs(tile.y*32-this.y) > 3));*/
+       
         return(tiles.every(t => t.name === "empty" || 
             (t.name === "rope" && Math.abs(t.y*32-this.y) > 3) ||
             (t.name === "gold" && Math.abs(t.y*32-this.y) > 3)
@@ -705,23 +724,6 @@ class MovingCharacter extends Entity {
                
             }
         });
-    }
-
-    updatePlayerAction() {  
-        this.playerAction.collect = this.isCollectingGold(); 
-
-        this.playerAction.climb = this.isClimbingLadder();
-         
-
-        if(!this.ignoreGravity) {
-            this.playerAction.fall = this.isFreefalling();
-        }
-       
-        this.playerAction.swing = this.isRopeSwinging();
-    }
-
-    update() {
-        this.updatePlayerAction(); // update the state.
     }
 }
 
@@ -821,7 +823,7 @@ class Player extends MovingCharacter {
     }
 
     update(delta) {
-        super.update();
+       // super.update();
  
       if (typeof this.animation.frame !== "number" || isNaN(this.animation.frame)) { this.animation.frame = 0; }
 
@@ -832,12 +834,10 @@ class Player extends MovingCharacter {
         this.animation.frame = 0;
     }
 
-        if(this.ignoreGravity) {
-                    this.ignoreGravity = false;
-                 }
-                 else {
-                    this.fallSpeed = 220;
-                 }
+        if(this.gravityActivated) {
+             this.fallSpeed = 220;
+                  //  this.ignoreGravity = false;
+        }
 
         // state object
          const state = Object.freeze({
@@ -858,6 +858,8 @@ class Player extends MovingCharacter {
 
                 this.animation.setAnimationIndex(2);
                 this.animation.length = 1;
+
+               
 
                 if(this.input === "ArrowUp") {
                     this.snapToLadder(this.x, this.y);
@@ -947,7 +949,7 @@ class Player extends MovingCharacter {
                         this.resolveFloorCollision();
                         this.currentState = "idle";
                 }
-                else {
+                else if(this.gravityActivated){
                      this.shiftPosition(this.velocityX, this.velocityY);
                 }
 
@@ -968,6 +970,7 @@ class Player extends MovingCharacter {
                
                 this.animation.length = 1;
                 this.velocityX = this.velocity * delta; this.velocityY = 0;
+                this.gravityActivated = false;
 
                 if(this.input === "ArrowLeft") {
                     if(!this.isHittingLeftWall() && this.x > 0) {
@@ -986,11 +989,12 @@ class Player extends MovingCharacter {
                         this.resolveRightWallCollision();
                     }
                     this.animation.length = 3;
-                     this.animation.setAnimationIndex(4);
+                    this.animation.setAnimationIndex(4);
                 }
 
                 else if(this.input === "ArrowDown") {
                     this.currentState = "fall";
+                    this.gravityActivated = true;
                 }
                 else {
                     // Adjust the vertical position.
@@ -1003,13 +1007,14 @@ class Player extends MovingCharacter {
 
                 if(!this.isRopeSwinging()) {
                     this.currentState = "fall";
+                    this.gravityActivated = true;
                 }
                 break;
             // Walk
              case state.WALK:
                 
                 this.velocityY = 0;
-
+                this.gravityActivated = true;
                 if(this.input === "ArrowLeft") {
                          
                     this.velocityX = -this.velocity * delta; 
@@ -1321,7 +1326,7 @@ class NPC extends MovingCharacter {
     }
 
      update(delta) {
-        super.update();
+       // super.update();
  
          if (typeof this.animation.frame !== "number" || isNaN(this.animation.frame)) { this.animation.frame = 0; }
 
@@ -1331,6 +1336,7 @@ class NPC extends MovingCharacter {
         this.animation.frame = 0;
     }
  
+   
     /*
                      this.enemies.forEach(enemy => {
                     if(this.isCloseTo(enemy)) {
@@ -1439,7 +1445,7 @@ class NPC extends MovingCharacter {
                       //if(tileMap.getTileBlock(this.x, this.y).id === 0) {
                        
                         // this.direction = "up";
-                       this.currentState = "climb";
+                       this.currentState = "idle";
                          
                        
                      // }
@@ -1486,15 +1492,18 @@ class NPC extends MovingCharacter {
                        
                         if(this.isTrapped()) {
             
+                            // TODO: Find a better solution.
                             tileMap.replaceTile(this.x, this.y, 10, "wall");
-                             this.x = tileMap.getTileBlock(this.x, this.y).x;
+
+                            this.x = tileMap.getTileBlock(this.x, this.y).x;
 
                             if(this.hasGold) {
                              
                                 tileMap.replaceTile(this.x, this.y - 32, 7, "gold");
                                 this.hasGold = false;
+                                 tileMap.draw(bgCtx);
                             }
-                            tileMap.draw(bgCtx);
+                           
                                 
                             // Set timeout for the escape.
                            setTimeout(() => {
@@ -1531,7 +1540,8 @@ class NPC extends MovingCharacter {
                 this.animation.setAnimationIndex(4);
                 this.animation.length = 1;
                 this.velocityX = this.velocity * delta; this.velocityY = 0;
-
+                 this.gravityActivated = false;
+ 
                 if(this.direction === "left") {
                     this.shiftPosition(-this.velocityX, this.velocityY);
                     this.animation.length = 3;
@@ -1544,6 +1554,7 @@ class NPC extends MovingCharacter {
 
                  if(this.direction === "down") {
                     this.currentState = "fall";
+                    this.gravityActivated = true;
                 }
                
                 /*
@@ -1554,6 +1565,7 @@ class NPC extends MovingCharacter {
 
                 if(!this.isRopeSwinging()) {
                     this.currentState = "fall";
+                    this.gravityActivated = true;
                 }
                 break;
            
@@ -1561,6 +1573,7 @@ class NPC extends MovingCharacter {
              case state.WALK:
                 
                 this.velocityY = 0;
+                this.gravityActivated = true;
 
                 if(this.direction === "left") {
                          
@@ -1646,12 +1659,10 @@ class NPC extends MovingCharacter {
       /* this.lastPlayerPosition.x = this.playerRef.x;
         this.lastPlayerPosition.y = this.playerRef.y;*/
 
-         if(this.ignoreGravity) {
-                    this.ignoreGravity = false;
-                 }
-                 else {
-                    this.fallSpeed = 220;
-                 }
+         if(this.gravityActivated) {
+             this.fallSpeed = 220;
+                  //  this.gravityActivated = false;
+        }
 
         this.draw();
     }
@@ -1703,25 +1714,22 @@ async function createGuards() {
      // Create the guards.
      guards = [];
      json.layers[1].objects.forEach(o => {
-      //  guards.push(new NPC(o.x - 32, o.y - 32, tileMap));
+        guards.push(new NPC(o.x - 32, o.y - 32, tileMap));
      });
 
     for(let n = 0; n < guards.length; n++) {
         guards[n].playerRef = player;
         guards[n].addAnimation(npcAnimation);
-        collider.enemies.push(guards[n]);
+       // collider.enemies.push(guards[n]);
     }
+
+    // guards[0].enemies.push(guards[1], guards[2]);
+    //  guards[1].enemies.push(guards[0], guards[2]);
+    //   guards[2].enemies.push(guards[0], guards[1]);
 }
 
 // TODO: Global variabel orsakar problem när den anropas i klasser.
 const player = new Player(0,0, tileMap, {x: 300, y: 200});
-
-
-// const npc1 = new NPC(680,480, tileMap);
-// const npc2 = new NPC(730,480, tileMap);
-// const npc3 = new NPC(700,480, tileMap);
-
-
 
 
 // Add references to the other objects.
